@@ -22,9 +22,10 @@ Platform-agnostic (kept from the first pass):
 
 Railway-specific (this pass):
 - **Backend `Dockerfile`** (php:8.3-cli + ext-swoole + pdo_mysql; pinned tag) + **`deploy/railway/entrypoint.sh`** (fails fast if `DB_*` unlinked → `migrate --force` → `config:cache`/`route:cache` → `octane:start --host=0.0.0.0 --port=$PORT --workers=2 --max-requests=500`).
+  - **Build/runtime deps the swoole+Octane path actually needed** (discovered live, one per failed deploy): `libbrotli-dev` (swoole 6.2 brotli default), `libssl-dev` (swoole 6.2 requires OpenSSL), and the `pcntl` PHP extension (Octane worker/signal management). All three are in the Dockerfile.
 - **`frontend/Dockerfile`** (node build → Caddy serve `dist` on `$PORT`) + **`frontend/Caddyfile`** (SPA fallback).
 - `.dockerignore` (root + frontend).
-- **`.github/workflows/ci.yml`** — gates only (Pint, `php artisan test`, frontend lint+build). **Railway's GitHub integration owns the deploy.**
+- **`.github/workflows/ci.yml`** — gates only (Pint, `php artisan test`, frontend lint+build). Deploy is **not** done by GitHub Actions; see Phase C for how Railway builds.
 
 Removed: `deploy/nginx`, `deploy/systemd`, `deploy/backup`, the SSH `deploy.yml` (VM-only).
 
@@ -41,21 +42,29 @@ Removed: `deploy/nginx`, `deploy/systemd`, `deploy/backup`, the SSH `deploy.yml`
 
 > **Variable scopes (gotcha):** frontend `VITE_API_BASE_URL` is **build-time**; backend `DB_*`/`APP_*` are **runtime**. Mixing them = silent failures.
 
-## Phase C — Trigger deploy #1
+## Phase C — Trigger deploy (how it actually works here)
 
-Merge `chore/GSD-1-walking-skeleton-deploy` → `main` (or push). Railway auto-builds both services; GitHub Actions runs the gates in parallel.
+Both services track the branch `chore/GSD-1-walking-skeleton-deploy`. **Auto-deploy-on-push is NOT active**: the Railway GitHub App is not installed on the repo, so a `git push` does not trigger a build. Deploys are triggered **manually** (Railway MCP / dashboard / `railway up`) against the latest commit on the tracked branch.
 
-## Verification (end-to-end)
+To get true push-to-deploy: install the **Railway GitHub App** on `Dudeldel/GettingShitDone`, then point each service at `main` and enable auto-deploy. Until then, merging to `main` is for code hygiene only — it does not deploy.
 
-- `curl -fsS https://<backend-domain>/api/health` → `200` + `{"status":"ok",…}`.
-- Open `https://<frontend-domain>/` → SPA renders the health status fetched from the API (proves SPA → API → MySQL → Octane).
-- `railway logs --service backend` clean; deploy marked active.
-- CI run green; spend limit visible.
-- Then: share the frontend public URL on the 10xDevs Arena (Circle).
+## Status — LIVE (deployed 2026-06-23)
+
+Walking skeleton is up and verified end-to-end:
+
+- **Frontend (SPA):** https://frontend-production-1c5d.up.railway.app — `200`
+- **Backend (API):** https://backend-production-2eb5d.up.railway.app/api/health — `200` `{"status":"ok","app":"Laravel","environment":"production",…}`
+- **MySQL:** connected; migrations ran on boot ("Nothing to migrate").
+- **Build/runtime URL inlined:** backend domain found in the SPA's JS bundle (build-var baked correctly).
+- **CORS:** `access-control-allow-origin: *` — cross-origin SPA → API fetch allowed.
+
+Chain proven: **Caddy static SPA → (CORS) → Octane/Swoole API → MySQL → JSON**, 3 Railway services, public HTTPS.
+
+Next: share the frontend URL on the 10xDevs Arena (Circle).
 
 ## Known first-build risks (from the cross-check)
 
-- **Swoole compile** — if `pecl install swoole` fails on the pinned base image, adjust the Dockerfile and rebuild in a preview env first (can't be built in the planning sandbox).
+- **Swoole compile** — *materialized and fixed*: needed `libbrotli-dev`, then `libssl-dev`, then the `pcntl` ext (three iterations). A future PHP base-image bump can reopen this; bump deliberately and watch the build.
 - **CORS** — default Laravel `allowed_origins:['*']` covers the public health endpoint cross-origin; tighten to the frontend origin when Sanctum cookie auth lands.
 - **Stale frontend API URL** — changing the backend domain requires a frontend **rebuild** (build-time inlining).
 
