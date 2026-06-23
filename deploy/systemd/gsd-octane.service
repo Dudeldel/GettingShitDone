@@ -1,0 +1,27 @@
+# GSD Laravel Octane (Swoole) service.
+# Install:
+#   sudo cp deploy/systemd/gsd-octane.service /etc/systemd/system/gsd-octane.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now gsd-octane
+# Replace <deploy-user> and paths before installing.
+#
+# Subsequent deploys reload workers gracefully via `php artisan octane:reload`
+# (run by the deploy user, no sudo) — see .github/workflows/deploy.yml.
+
+[Unit]
+Description=GSD Laravel Octane (Swoole)
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=<deploy-user>
+Group=<deploy-user>
+WorkingDirectory=/var/www/gsd
+# Low worker count + request recycling: RAM/leak guards for a shared Lightsail box.
+ExecStart=/usr/bin/php artisan octane:start --server=swoole --host=127.0.0.1 --port=8000 --workers=2 --max-requests=500
+ExecReload=/usr/bin/php artisan octane:reload
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
