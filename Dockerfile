@@ -4,7 +4,7 @@ FROM php:8.3-cli AS app
 
 # System deps + PHP extensions Laravel needs, plus Swoole for Octane.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev libonig-dev libbrotli-dev \
+        git unzip libzip-dev libonig-dev libbrotli-dev libssl-dev \
     && docker-php-ext-install pdo_mysql bcmath zip mbstring \
     && yes '' | pecl install swoole \
     && docker-php-ext-enable swoole \
