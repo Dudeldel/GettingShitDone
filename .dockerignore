@@ -1,0 +1,15 @@
+.git
+.github
+frontend
+node_modules
+vendor
+.env
+.env.*
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests
+context
+.claude
+*.md

@@ -1,0 +1,9 @@
+# Serve the built SPA on Railway's injected $PORT with client-side routing fallback.
+:{$PORT}
+
+root * /srv
+encode gzip
+
+# SPA fallback: unknown paths return index.html.
+try_files {path} /index.html
+file_server
