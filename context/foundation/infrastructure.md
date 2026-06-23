@@ -1,113 +1,102 @@
 ---
 project: getting-shit-done
 researched_at: 2026-06-23
-recommended_platform: AWS Lightsail (existing instance, co-located MariaDB)
-runner_up: Railway
+recommended_platform: Railway (2 services — Laravel/Octane API + static React SPA, managed MySQL)
+runner_up: AWS Lightsail (dedicated instance)
 context_type: mvp
 tech_stack:
   language: php
   framework: laravel (REST API) + vite/react SPA
-  runtime: php 8.3 (laravel octane) + node (frontend build)
+  runtime: php 8.3 (laravel octane / swoole) + node (frontend build)
 ---
 
 ## Recommendation
 
-**Deploy on the existing AWS Lightsail instance, co-locating a MariaDB database for this app.**
+**Deploy on Railway as two services: a Dockerfile-built Laravel + Octane (Swoole) API, a static React SPA, and Railway-managed MySQL.**
 
-Cost is the top priority, and the developer already pays for a small Lightsail VM running another app — so adding GSD alongside it is ~$0 marginal cost (resize only if the box lacks RAM headroom), which beats every managed PaaS's $4–8/mo of new spend. The developer prefers MariaDB/MySQL, which co-locates for free on the VM but is not first-class managed on Fly.io or Render (both Postgres-only). AWS familiarity (interview) breaks the remaining ties. This is a conscious trade: Lightsail scores lower on agent-friendliness (raw VM → manual TLS, Octane supervisor, snapshot-only rollback) than the managed three, but the real-world constraints — existing infra, MariaDB preference, cost, familiarity — outweigh that here. The agent-ops penalty is mitigated in the risk register below.
+> **Decision history.** The first pass recommended co-locating on the developer's existing AWS Lightsail box (cost ≈ $0 marginal). The headroom gate failed it: the box is a 512 MB Bitnami instance with ~284 MB available and *already swapping* — Octane (which keeps the framework resident) plus a database does not fit, and co-tenancy means a shared blast radius. Resizing erases the cost premise, so the decision swapped to the documented runner-up, **Railway**, with the anti-bias cross-check re-run on it (below).
+
+Railway wins on the two things the developer asked for after the gate failed — *easier to stand up, fewer headscratchers later*. It removes the VM ops long-tail (TLS renewal, OS patching, manual resize, snapshot-only rollback, self-owned backups, port discipline) that is exactly where a Lightsail instance's recurring pain lives. It offers **native managed MySQL** (matching the developer's DB preference — not first-class on Fly/Render), app-versioned deploys with one-click rollback, native GitHub auto-deploy, and an official CLI + MCP server for clean agent ops. Octane returns safely because each service gets its **own isolated, right-sized container** — no neighbor to fight for RAM. Accepted trade-offs: a one-time Octane Dockerfile, build-time-baked frontend config, and usage-metered billing (bounded ~$10–20/mo at single-user scale; set a spend cap).
 
 ## Platform Comparison
 
-Hard filter applied first: **Laravel Octane requires a persistent always-on process**, so serverless-only hosts (Cloudflare Workers — no PHP runtime at all; Vercel / Netlify functions — no long-lived PHP worker) are dropped before scoring. The four survivors run a persistent container or VM.
+Hard filter: **Laravel Octane requires a persistent always-on process** → serverless-only hosts (Cloudflare Workers — no PHP; Vercel/Netlify functions — no long-lived PHP worker) dropped before scoring.
 
 | Platform | CLI-first | Managed > raw | Agent docs | Stable deploy API | MCP / integration |
 |---|---|---|---|---|---|
+| **Railway** | Pass | Pass | Pass | Pass | Pass (MCP *beta*) |
+| **Render** | Pass | Pass | Pass | Pass | Pass (MCP GA) |
+| **Fly.io** | Pass | Pass | Partial | Pass | Partial (MCP *experimental*) |
 | **AWS Lightsail** | Partial | Partial | Pass | Partial | Pass |
-| **Fly.io** | Pass | Pass | Partial | Pass | Partial |
-| **Render** | Pass | Pass | Pass | Pass | Pass |
-| **Railway** | Pass | Pass | Pass | Pass | Pass |
-
-Per-platform notes:
-
-- **AWS Lightsail** — CLI **Partial**: the VM path has no one-command app deploy (you SSH or build CI yourself); Lightsail *Containers* do have `push-container-image` → `create-container-service-deployment`. Managed **Partial**: a raw VM means OS patching, PHP/web-server install, TLS, and the Octane supervisor are all yours. Docs **Pass**: AWS docs now serve Markdown + `llms.txt` (GA 2025). Deploy API **Partial**: rollback is whole-VM snapshot, not app-versioned. MCP **Pass**: AWS MCP Server GA (May 2026), IAM-scoped. Cost: **~$5–7/mo fixed** standalone, **~$0 marginal** on the existing box. MariaDB co-locates free.
-
-- **Fly.io** — strongest Octane fit: official `fly launch` Laravel detection and first-class Octane (FrankenPHP/Swoole/RoadRunner) docs. CLI/deploy GA (`fly deploy`, `fly logs`; rollback = re-deploy a prior image — no `fly rollback`). Docs **Partial** (no `llms.txt`); MCP **experimental**. Cheapest *with SQLite* (~$4–5/mo) but **managed Postgres floors at $38/mo** and there is **no managed MySQL** — disqualifying given the MariaDB preference. Auto-stop is on by default and conflicts with keeping Octane warm.
-
-- **Render** — best agent-ops: ships `llms.txt` + `llms-full.txt`, official **MCP server GA** (works with Claude Code), full CLI, and **auto-rollback on failed deploy**. PHP is **Docker-only** (no native runtime, no official Octane recipe — you maintain the Dockerfile). Managed DB is **Postgres-only** (MySQL would be self-hosted in a container). Free tier spins down (incompatible with Octane). ~$7–8/mo.
-
-- **Railway** — excellent DX, official MCP (**beta**), markdown/`llms.txt` docs, **native managed MySQL** (the only managed PaaS here that offers it first-class). Octane via custom Dockerfile (community `exaco/laravel-octane-dockerfile`). Billing is **usage-metered** (~$5–9/mo) — the least predictable for a cost-first decision, which is why it's runner-up rather than the pick.
 
 ### Shortlisted Platforms
 
-#### 1. AWS Lightsail (Recommended)
+#### 1. Railway (Recommended)
 
-Wins on the constraints that actually bind this project: an **already-paid-for instance** (near-zero marginal cost), a **free co-located MariaDB** matching the developer's stated DB preference, and **AWS familiarity**. It is a persistent VM, so Octane runs natively with a supervisor — no serverless/auto-stop footguns. The cost is fixed and predictable. Accepted trade: lower agent-friendliness than the managed three.
+Native managed **MySQL** (the only managed PaaS here with it first-class), persistent Octane containers, GitHub auto-deploy, app-versioned rollback, official CLI + MCP (beta), markdown/`llms.txt` docs. Per-service isolation lets the developer keep Octane without the shared-box RAM problem that sank the Lightsail co-location plan. Usage-metered billing is the one cost-shape caveat — bounded and cap-able at single-user scale.
 
-#### 2. Railway
+#### 2. AWS Lightsail — dedicated instance
 
-The best managed fallback if the shared box runs out of headroom: it's the only managed PaaS here with **native MySQL**, has strong agent-ops (CLI + MCP beta + `llms.txt` docs), and runs persistent Octane containers. The gap vs. the recommendation is purely cost-shape — usage-metered billing is less predictable than Lightsail's flat fee, and it's *new* spend on top of an instance the developer already pays for.
+The familiar fallback: a fresh, right-sized Lightsail box (e.g. 2 GB, ~$12/mo flat) running Octane + MariaDB. Flat predictable price, AWS familiarity, native MariaDB, no lock-in. The gap vs. Railway is the entire ops long-tail it makes the developer own (TLS, patching, scaling, snapshot-only rollback, backups) — none of which Railway charges human attention for.
 
 #### 3. Render
 
-Highest raw agent-friendliness score (GA MCP, best docs, auto-rollback), but two gaps push it to third for *this* project: managed DB is **Postgres-only** (MariaDB preference unmet without self-hosting), and PHP is Docker-only with **no official Octane guidance**. Better suited to a Postgres project that wants maximum hands-off ops.
+Highest raw agent-friendliness (GA MCP, best docs, auto-rollback), but managed DB is **Postgres-only** (MariaDB/MySQL preference unmet without self-hosting) and PHP is Docker-only with no official Octane recipe — pushing it behind Railway for this project.
 
-## Anti-Bias Cross-Check: AWS Lightsail (shared instance + MariaDB + Octane)
+## Anti-Bias Cross-Check: Railway (Octane/Swoole + managed MySQL, 2 services)
 
 ### Devil's Advocate — Weaknesses
 
-1. **Noisy-neighbor RAM contention.** Octane keeps the whole app booted in memory permanently; on a small box already running another app *and* MariaDB, the two apps can starve each other into OOM kills. Headline risk.
-2. **Shared blast radius.** One bad deploy, an Octane memory leak, or an `apt upgrade` that bumps PHP takes down *both* apps. Zero isolation between tenants on the box.
-3. **No app-versioned rollback.** Rollback is whole-VM snapshot — you cannot cleanly revert just this app's release without dragging the neighbor app and the database back with it.
-4. **Manual operational surface for the second app:** a new nginx server block, a second certbot certificate + renewal, and the Octane supervisor (systemd/Supervisor) are all hand-wired and easy for an unattended agent to misconfigure (e.g. leaving Octane's `:8000` or MariaDB's `:3306` reachable).
-5. **DB durability is self-owned.** Co-located MariaDB has no automated backups unless you build them; the PRD's capture-durability guarantee rests on a `mysqldump` cron that must not be forgotten.
+1. **Usage-metered billing has no hard cap by default** — a crash-looping container or runaway query bills RAM-hours; a $10 month silently becomes $50 unless a spend limit is set.
+2. **`VITE_API_BASE_URL` is baked at build time** — changing the backend domain needs a frontend *rebuild*, not an env tweak; easy to ship a front pointing at a stale API.
+3. **You own the Swoole build** — a PHP minor bump or base-image change can break the `pecl install swoole` compile, failing at deploy time and blocking a hotfix.
+4. **Managed MySQL is single-instance on hobby** — a maintenance restart drops connections that Octane's persistent workers hold; errors until workers recycle.
+5. **App-sleeping** — if enabled, the Octane container cold-starts; first request after idle is slow/fails.
 
 ### Pre-Mortem — How This Could Fail
 
-The app shipped onto the existing box in an afternoon — no new bill, MariaDB already familiar. For weeks it was perfect. Then traffic on the *other* app spiked one evening; with Octane holding GSD's full framework in RAM, the box crossed its memory ceiling and the OOM killer reaped MariaDB. Both apps went down, and the morning capture — the one flow the PRD guards at ~2 seconds — returned 500s. The "fix" was resizing the instance, quietly doubling the bill the choice was meant to avoid. A month later a routine `apt upgrade` advanced PHP and broke the neighbor app's pinned extension; rolling back the VM snapshot to repair it also reverted three of GSD's migrations, corrupting state. Backups turned out to be whole-VM snapshots only — no per-database dump — so the clean restore everyone assumed existed didn't. None of it was a Lightsail fault; it was the absence of isolation and the manual operational surface a managed platform would have handled.
+Six months in, none of it was fatal but each was a "new platform" papercut: usage crept because no spend cap was set; a service rename changed the backend domain and the frontend kept pointing at the old one for a day (the build still succeeded, so nothing screamed); a PHP base-image bump broke the swoole compile mid-deploy and blocked a fix; and a MySQL maintenance window recycled connections the Octane workers held, throwing errors until `--max-requests` recycled them. The team hit these because they knew AWS, not Railway — the managed model removed the *ops* headscratchers but introduced *platform-fluency* ones.
 
 ### Unknown Unknowns
 
-- **Verify headroom before committing** (`free -m`): if the box has <~512 MB free, Octane won't fit and you'll resize — erasing the "$0 marginal cost" premise that justifies this choice.
-- **PHP-version coupling:** if the neighbor app pins a different PHP version, running two on one box needs careful CLI/extension separation. Octane's own server helps, but `php.ini`/extensions still diverge.
-- **GitHub Actions has no native Lightsail deploy** — wire an SSH key (or self-hosted runner); the deploy script must end in `php artisan octane:reload` (graceful) so it doesn't drop in-flight requests or disturb the neighbor.
-- **Snapshots are instance-wide, not per-app** — backup/restore must be app-and-DB aware (`mysqldump` per database), not VM snapshots.
-- **AWS MCP server is GA but broad** — pointing an agent at it grants far more than this one instance; scope the IAM credentials tightly to Lightsail + this instance.
+- Build-arg vs runtime variables are **different scopes**: frontend needs `VITE_API_BASE_URL` at *build*, backend needs DB creds at *runtime* — mixing them = silent failure.
+- **Reference variables** must link the MySQL creds into the backend service, or it boots with no DB.
+- **Set a spend limit explicitly** — not on by default.
+- **Pick the region at service creation** — moving later is non-trivial.
+- Swoole + Octane: no request state in singletons; `--max-requests` masks leaks, doesn't fix them.
 
 ## Operational Story
 
-- **Preview deploys**: Lightsail has no built-in PR preview URLs. For an MVP on a shared box, preview locally (`php composer.phar dev`) and treat `main` as the only deployed environment; if previews become needed, spin a separate cheap `$5` Lightsail instance as a staging target rather than a second app on the production box.
-- **Secrets**: app secrets live in `.env` on the instance (root/deploy-user readable only, `chmod 600`); CI/CD credentials (SSH key, host) live in **GitHub Secrets**. Rotate the SSH deploy key and `APP_KEY` by hand; MariaDB credentials are per-app (a dedicated DB user, not root).
-- **Rollback**: redeploy the previous git tag via the Actions workflow (`git checkout <tag> && composer install --no-dev && php artisan migrate --force && php artisan octane:reload`). VM snapshots are the disaster-recovery floor, **not** the routine rollback — they revert the neighbor app and DB too. DB migrations do not auto-roll-back; keep `down()` methods correct or restore from `mysqldump`.
-- **Approval**: a human approves resizing the instance, rotating `APP_KEY`/SSH keys, and any `apt upgrade` touching PHP (it affects the neighbor app). An agent may deploy app code, run forward migrations, and `octane:reload` unattended.
-- **Logs**: read-only over SSH — `tail -f storage/logs/laravel.log` (text in local/staging; ECS JSON on stdout in prod per app conventions), `journalctl -u <octane-service>` for the Octane supervisor, and `journalctl -u nginx` / `mariadb` for the edge and DB. The AWS MCP server (GA, IAM-scoped) can surface instance metrics if wired.
+- **Preview deploys**: Railway builds a deploy per push; enable PR environments for branch previews (each gets its own URL). The frontend's API base URL differs per environment — use Railway's per-environment variables.
+- **Secrets**: live in Railway service variables (encrypted), injected at build (frontend `VITE_*`) or runtime (backend `DB_*`, `APP_KEY`). MySQL creds linked into the backend via reference variables. No secrets in the repo.
+- **Rollback**: Railway keeps versioned deploys — redeploy a previous build from the dashboard or `railway redeploy`. DB migrations don't auto-roll-back; keep `down()` correct.
+- **Approval**: a human sets the spend cap, deletes services, and rotates `APP_KEY`/DB credentials. The agent may deploy code, run forward migrations, and read logs unattended.
+- **Logs**: `railway logs --service <name>` (or the dashboard / MCP server) — read-only, structured.
 
 ## Risk Register
 
 | Risk | Source | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| Octane + neighbor app + MariaDB exhaust RAM → OOM kills | Devil's advocate / Pre-mortem | M | H | Check `free -m` before deploy; cap Octane workers (`--workers`); set MariaDB `innodb_buffer_pool_size` conservatively; resize instance if <~512 MB free; add a memory alarm |
-| Whole-box blast radius (one app/upgrade breaks both) | Devil's advocate | M | H | Gate `apt upgrade`/PHP changes behind human approval; pin PHP version; consider a dedicated instance once budget allows |
-| No clean per-app rollback (snapshot reverts everything) | Devil's advocate | M | M | Deploy by git tag and roll back by re-deploying the prior tag; keep migration `down()` correct; reserve VM snapshots for disaster recovery only |
-| Co-located MariaDB has no automated backups | Devil's advocate | M | H | Nightly `mysqldump` cron of this app's DB to a Lightsail bucket/S3; test restore once; document retention |
-| Octane stays warm but leaks state between requests | Research finding (Octane) | M | M | Avoid request state in singletons/static props; schedule periodic `octane:reload`; monitor memory growth |
-| Exposed ports (Octane `:8000`, MariaDB `:3306`) | Unknown unknowns | L | H | Bind Octane and MariaDB to `127.0.0.1`; nginx is the only public listener; lock Lightsail firewall to 80/443 |
-| Resize erases the "$0 marginal cost" premise | Unknown unknowns | M | M | Verify headroom first; if a resize is needed, re-compare against Railway (native MySQL) at that new price point |
-| GitHub Actions deploy misconfig drops requests / disturbs neighbor | Unknown unknowns | L | M | Deploy script ends in `octane:reload` (graceful), not a hard restart; scope SSH deploy user to this app's directory |
-| Over-broad AWS MCP IAM credentials | Unknown unknowns | L | M | Scope the IAM principal to Lightsail + this instance only; no account-wide admin for the agent |
+| Usage billing has no default cap | Devil's advocate | M | M | Set a spend limit at project creation; alert at a threshold |
+| Frontend ships pointing at stale backend domain | Devil's advocate / Unknown unknowns | M | M | `VITE_API_BASE_URL` as a build-arg variable; redeploy frontend after any backend domain change; smoke-test `/api/health` from the SPA post-deploy |
+| `pecl install swoole` breaks on a base-image/PHP bump | Devil's advocate / Pre-mortem | L | M | Pin the PHP base image tag in the Dockerfile; bump deliberately, not implicitly; test build in a preview env first |
+| MySQL restart drops Octane-held connections | Devil's advocate | L | M | `--max-requests=500` recycles workers; retry transient DB errors; rely on Laravel reconnect |
+| App-sleeping cold-starts the API | Devil's advocate | L | M | Keep app-sleeping OFF on the backend service |
+| Build-arg vs runtime variable confusion | Unknown unknowns | M | M | Document which vars are build vs runtime in deploy-plan.md; frontend = build, backend = runtime |
+| MySQL creds not linked to backend | Unknown unknowns | L | H | Wire reference variables before first deploy; backend `entrypoint` fails fast if `DB_*` missing |
+| Swoole state leakage between requests | Research finding (Octane) | M | M | No request state in singletons/static props; `--max-requests` recycling |
+| CORS blocks SPA → API (cross-origin, 2 services) | Research finding | M | M | Default Laravel `allowed_origins:['*']` covers the public health endpoint; tighten to the frontend origin when Sanctum cookie auth lands |
 
 ## Getting Started
 
-Validated against this stack's versions (Laravel 12, Laravel Octane current, PHP 8.3, MariaDB):
+Validated against this stack (Laravel 13, Octane v2.17 / Swoole, PHP 8.3). Repo artifacts already committed: backend `Dockerfile` + `deploy/railway/entrypoint.sh`, `frontend/Dockerfile` + `frontend/Caddyfile`, `.dockerignore`s, `.github/workflows/ci.yml`.
 
-1. **Confirm headroom on the existing instance**: SSH in, run `free -m` and `df -h`. Ensure ~512 MB+ free RAM and disk for a warm Octane worker + MariaDB. Resize the Lightsail plan first if not.
-2. **Provision the DB**: install MariaDB if absent; create a dedicated database and user for GSD (`CREATE DATABASE gsd; CREATE USER ...; GRANT ... ON gsd.*`); bind MariaDB to `127.0.0.1`. Set `DB_CONNECTION=mysql` + credentials in `.env`.
-3. **Install Octane**: `composer require laravel/octane` then `php artisan octane:install` (choose **FrankenPHP** — the current Laravel-recommended Octane server). Add a systemd/Supervisor unit running `php artisan octane:start --server=frankenphp --host=127.0.0.1 --port=8000`.
-4. **Edge + TLS**: add an nginx server block for the app's subdomain reverse-proxying to `127.0.0.1:8000` and serving the built SPA (`frontend/dist`) as static assets; issue a cert with `certbot --nginx` for the new subdomain.
-5. **CI/CD (GitHub Actions, auto-deploy on merge)**: add a workflow that SSHes to the instance and runs `git pull` → `composer install --no-dev --optimize-autoloader` → `(cd frontend && npm ci && npm run build)` → `php artisan migrate --force` → `php artisan octane:reload`. Store the SSH key + host in GitHub Secrets.
+1. **Create a Railway project**, pick the region nearest you, and **set a spend limit**.
+2. **Add the MySQL plugin** (managed database).
+3. **Backend service** — connect the GitHub repo, root `/`, builder = Dockerfile. Link MySQL creds via reference variables (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`), set `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `OCTANE_SERVER=swoole`. Keep app-sleeping OFF.
+4. **Frontend service** — same repo, root `/frontend`, builder = Dockerfile. Set `VITE_API_BASE_URL` (build variable) to the backend's public Railway domain.
+5. **Deploy** — push to `main`; Railway builds both services. Verify `/api/health` (backend domain) and the SPA (frontend domain).
 
 ## Out of Scope
 
-The following were not evaluated in this research:
-- Docker image configuration
-- CI/CD pipeline setup (only the deploy step shape is sketched in Getting Started)
-- Production-scale architecture (multi-region, HA, DR)
+Docker image hardening beyond MVP, CI/CD beyond the gates workflow, production-scale architecture (multi-region, HA, read replicas).

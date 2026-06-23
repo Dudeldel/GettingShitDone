@@ -1,57 +1,68 @@
-# Deploy Plan — Walking Skeleton (GSD → AWS Lightsail)
+# Deploy Plan — Walking Skeleton (GSD → Railway, 2 services)
 
-> Foundation-chain artifact (Module 1, Lesson 5). Consumed by later milestone planning as ground truth for "what's deployed and which secrets are wired". Decision source: `context/foundation/infrastructure.md`. Stack: `context/foundation/tech-stack.md`.
+> Foundation-chain artifact (Module 1, Lesson 5). Decision source: `context/foundation/infrastructure.md`. Stack: `context/foundation/tech-stack.md`.
 
 ## Context
 
-First deploy of the single-user GTD app. Target = the developer's **existing AWS Lightsail VM**, co-locating **MariaDB**, running the Laravel API under **Octane (Swoole)** behind nginx, with the **Vite/React SPA** served as static files. CI = **GitHub Actions, auto-deploy on merge to `main`**.
+First deploy of the single-user GTD app. Target = **Railway**, two services from one repo:
+- **Backend** — Laravel REST API under **Octane (Swoole)**, Dockerfile-built, talks to **Railway-managed MySQL**.
+- **Frontend** — React/Vite **SPA**, built and served static (Caddy) as its own service.
 
-This milestone ships a **walking skeleton**, not features: one trivial endpoint exercised end-to-end (build → MariaDB → Octane → nginx → TLS → public URL) so every later feature deploys on a proven path.
+Why Railway (not the originally-recorded Lightsail co-location): the existing 512 MB Bitnami box failed the RAM headroom gate (~284 MB available, already swapping) — Octane + a DB won't fit and co-tenancy is a shared blast radius. The developer chose a managed path over resizing. See `infrastructure.md` for the re-run anti-bias cross-check.
 
-**Decisions:** Octane engine = **Swoole** · scope = **minimal** (`GET /api/health` + SPA fetches it) · flow = **GitHub Actions from the start**.
+This ships a **walking skeleton**, not features: `GET /api/health` exercised end-to-end (build → MySQL → Octane → public URL) + the SPA fetching it. Features come later.
 
-**Execution split:** agent owns repo artifacts (Phase A — done); developer owns the one-time box bootstrap + secrets (Phase B); push triggers deploy #1 only after the box is ready (Phase C).
+## Phase A — Repo artifacts (DONE, on `chore/GSD-1-walking-skeleton-deploy`)
 
-## Phase A — Repo artifacts (DONE, committed on `chore/GSD-1-walking-skeleton-deploy`)
+Platform-agnostic (kept from the first pass):
+- `install:api` → `routes/api.php` + Sanctum; `HasApiTokens` on `User`.
+- `laravel/octane` (Swoole) + `config/octane.php`; `OCTANE_SERVER=swoole`.
+- Public `GET /api/health` → `app/Http/Controllers/Api/V1/HealthController.php`.
+- Frontend `api.ts` + `App.tsx` fetch `/api/health`; `VITE_API_BASE_URL` support.
 
-- `php artisan install:api` → `routes/api.php` + Sanctum; `HasApiTokens` on `app/Models/User.php`.
-- `laravel/octane` v2.17 + `laravel/sanctum` v4.3 installed; `config/octane.php` (Swoole); `OCTANE_SERVER=swoole` in `.env.example`.
-- `GET /api/health` → `app/Http/Controllers/Api/V1/HealthController.php` (public, `Response::HTTP_OK`).
-- `.env.example` switched to MariaDB (`DB_CONNECTION=mysql`, db/user `gsd`); `phpunit.xml` stays SQLite in-memory.
-- Frontend: `frontend/src/api.ts` + `App.tsx` fetch `/api/health` on mount; `vite.config.ts` `base:'/'`, `outDir:dist`; `frontend/.env.example` with `VITE_API_BASE_URL` (empty = same-origin).
-- `deploy/nginx/gsd.conf`, `deploy/systemd/gsd-octane.service` (`--workers=2 --max-requests=500`), `deploy/backup/mysqldump-gsd.sh`.
-- `.github/workflows/deploy.yml` — CI job (composer install · pint --test · `php artisan test` · frontend build) then SSH deploy job (`git pull` → `composer install --no-dev` → frontend build → `migrate --force` → `config:cache`/`route:cache` → `octane:reload`).
+Railway-specific (this pass):
+- **Backend `Dockerfile`** (php:8.3-cli + ext-swoole + pdo_mysql; pinned tag) + **`deploy/railway/entrypoint.sh`** (fails fast if `DB_*` unlinked → `migrate --force` → `config:cache`/`route:cache` → `octane:start --host=0.0.0.0 --port=$PORT --workers=2 --max-requests=500`).
+- **`frontend/Dockerfile`** (node build → Caddy serve `dist` on `$PORT`) + **`frontend/Caddyfile`** (SPA fallback).
+- `.dockerignore` (root + frontend).
+- **`.github/workflows/ci.yml`** — gates only (Pint, `php artisan test`, frontend lint+build). **Railway's GitHub integration owns the deploy.**
 
-## Phase B — One-time box bootstrap (developer; run on the Lightsail box)
+Removed: `deploy/nginx`, `deploy/systemd`, `deploy/backup`, the SSH `deploy.yml` (VM-only).
 
-- **B0. Headroom gate** — `free -m` / `df -h`. Need ~512 MB+ free. If less → resize first (re-evaluate vs Railway).
-- **B1. Runtime** — PHP 8.3 + extensions, **`ext-swoole`** (`pecl install swoole`), Composer (global), Node 20+, nginx, MariaDB, certbot. Reuse the neighbor app's where present.
-- **B2. MariaDB** — `CREATE DATABASE gsd; CREATE USER 'gsd'@'localhost'…; GRANT … ON gsd.*`; bind to `127.0.0.1`.
-- **B3. Static IP + DNS** — attach a Lightsail static IP; A record `<subdomain> → IP`.
-- **B4. Clone + deploy key** — clone to `/var/www/gsd` as `<deploy-user>`; read-only GitHub deploy key for `git pull`.
-- **B5. Prod `.env`** — `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<subdomain>`, `php artisan key:generate`, MariaDB `DB_*`. `chmod 600`.
-- **B6. nginx + TLS** — install `deploy/nginx/gsd.conf` (replace `<subdomain>`/root), `nginx -t`, reload; `certbot --nginx -d <subdomain>`. Firewall: **80/443 only**; never expose `:8000`/`:3306`.
-- **B7. Octane service** — install `deploy/systemd/gsd-octane.service` (replace `<deploy-user>`), `daemon-reload`, `enable --now`. Verify `:8000` localhost-only.
-- **B8. GitHub Secrets** — `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` in repo settings. Scope any AWS/IAM creds to this instance.
-- **B9. Backups** — install the nightly `mysqldump` cron.
+## Phase B — Railway setup (developer; one-time)
+
+- **B1. Project** — create a Railway project; **pick the nearest region**; **set a spend limit** (not on by default).
+- **B2. MySQL** — add the managed MySQL plugin.
+- **B3. Backend service** — connect the GitHub repo, **root `/`**, builder = **Dockerfile**. Variables (runtime):
+  - Link MySQL via **reference variables**: `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
+  - `APP_KEY` (generate: `php artisan key:generate --show`), `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<backend-domain>`, `OCTANE_SERVER=swoole`.
+  - **App-sleeping OFF.** Generate a public domain.
+- **B4. Frontend service** — same repo, **root `/frontend`**, builder = **Dockerfile**. **Build** variable `VITE_API_BASE_URL=https://<backend-domain>`. Generate a public domain.
+- **B5. (optional)** PR/preview environments; per-environment `VITE_API_BASE_URL`.
+
+> **Variable scopes (gotcha):** frontend `VITE_API_BASE_URL` is **build-time**; backend `DB_*`/`APP_*` are **runtime**. Mixing them = silent failures.
 
 ## Phase C — Trigger deploy #1
 
-Merge `chore/GSD-1-walking-skeleton-deploy` → `main` (or push). GitHub Actions runs CI then the SSH deploy job, ending on `octane:reload`. Watch the run logs.
+Merge `chore/GSD-1-walking-skeleton-deploy` → `main` (or push). Railway auto-builds both services; GitHub Actions runs the gates in parallel.
 
 ## Verification (end-to-end)
 
-- `curl -fsS https://<subdomain>/api/health` → `200` + `{"status":"ok",…}`.
-- Open `https://<subdomain>/` → SPA renders the health status fetched from the API.
-- `systemctl status gsd-octane` running; `:8000` bound to `127.0.0.1`.
-- Neighbor app still healthy; `free -m` within limits.
-- TLS valid; GitHub Action green.
-- Then: share the public URL on the 10xDevs Arena (Circle).
+- `curl -fsS https://<backend-domain>/api/health` → `200` + `{"status":"ok",…}`.
+- Open `https://<frontend-domain>/` → SPA renders the health status fetched from the API (proves SPA → API → MySQL → Octane).
+- `railway logs --service backend` clean; deploy marked active.
+- CI run green; spend limit visible.
+- Then: share the frontend public URL on the 10xDevs Arena (Circle).
+
+## Known first-build risks (from the cross-check)
+
+- **Swoole compile** — if `pecl install swoole` fails on the pinned base image, adjust the Dockerfile and rebuild in a preview env first (can't be built in the planning sandbox).
+- **CORS** — default Laravel `allowed_origins:['*']` covers the public health endpoint cross-origin; tighten to the frontend origin when Sanctum cookie auth lands.
+- **Stale frontend API URL** — changing the backend domain requires a frontend **rebuild** (build-time inlining).
 
 ## Required inputs
 
-`<subdomain>` · `<deploy-user>` · B0 headroom result.
+`<backend-domain>` and `<frontend-domain>` (Railway-generated) · region · spend cap.
 
 ## Out of scope
 
-GTD features, Sanctum auth UI, Larastan/Pest/Scramble install, preview envs, multi-region/HA — later milestones.
+GTD features, Sanctum auth UI, Larastan/Pest/Scramble install, Docker hardening, multi-region/HA.

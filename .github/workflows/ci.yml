@@ -1,12 +1,15 @@
-name: Deploy
+name: CI
 
+# Quality gates. Deploy is handled by Railway's native GitHub integration
+# (auto-build on push to main), so there is no deploy job here.
 on:
   push:
     branches: [main]
+  pull_request:
 
 jobs:
-  ci:
-    name: CI gates
+  backend:
+    name: Backend gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,36 +38,20 @@ jobs:
           DB_DATABASE: ':memory:'
         run: php artisan test
 
+  frontend:
+    name: Frontend gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Build frontend
+      - name: Install & build
         working-directory: frontend
         run: |
           npm ci
+          npm run lint
           npm run build
-
-  deploy:
-    name: Deploy to Lightsail
-    needs: ci
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -euo pipefail
-            cd /var/www/gsd
-            git pull --ff-only origin main
-            composer install --no-dev --optimize-autoloader --no-interaction
-            (cd frontend && npm ci && npm run build)
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan octane:reload
