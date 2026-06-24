@@ -423,31 +423,31 @@ set per environment on Railway; changing the frontend domain requires updating i
 
 #### Automated
 
-- [x] 1.1 Larastan level 6 clean: `./vendor/bin/phpstan analyse --memory-limit=512M`
-- [x] 1.2 Pest green incl. new auth tests: `php artisan test`
-- [x] 1.3 Pint clean: `./vendor/bin/pint --test`
-- [x] 1.4 `composer quality` exits 0
+- [x] 1.1 Larastan level 6 clean: `./vendor/bin/phpstan analyse --memory-limit=512M` — bf41d60
+- [x] 1.2 Pest green incl. new auth tests: `php artisan test` — bf41d60
+- [x] 1.3 Pint clean: `./vendor/bin/pint --test` — bf41d60
+- [x] 1.4 `composer quality` exits 0 — bf41d60
 
 #### Manual
 
-- [x] 1.5 `register` creates the account once, then 403 on a second call
-- [x] 1.6 `login` returns a usable Bearer token; `/me` with it returns the user
-- [x] 1.7 Wrong password → 401; hammering login → 429
-- [x] 1.8 An authenticated request's JSON log line includes `user.id`
+- [x] 1.5 `register` creates the account once, then 403 on a second call — bf41d60
+- [x] 1.6 `login` returns a usable Bearer token; `/me` with it returns the user — bf41d60
+- [x] 1.7 Wrong password → 401; hammering login → 429 — bf41d60
+- [x] 1.8 An authenticated request's JSON log line includes `user.id` — bf41d60
 
 ### Phase 2: Frontend auth
 
 #### Automated
 
-- [ ] 2.1 Type check + build: `npm run build`
-- [ ] 2.2 Lint: `npm run lint`
+- [x] 2.1 Type check + build: `npm run build`
+- [x] 2.2 Lint: `npm run lint`
 
 #### Manual
 
-- [ ] 2.3 Visiting `/` logged out redirects to `/login`
-- [ ] 2.4 Login stores the token and lands on the authenticated shell
-- [ ] 2.5 Refresh keeps the session (token rehydrated)
-- [ ] 2.6 Logout clears state and returns to `/login`
+- [x] 2.3 Visiting `/` logged out redirects to `/login`
+- [x] 2.4 Login stores the token and lands on the authenticated shell
+- [x] 2.5 Refresh keeps the session (token rehydrated)
+- [x] 2.6 Logout clears state and returns to `/login`
 
 ### Phase 3: Integration & hardening
 

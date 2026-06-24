@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import { fetchHealth, type HealthStatus } from './api'
+import { useAuth } from './auth/context'
 
 function App() {
+  const { user, logout } = useAuth()
   const [health, setHealth] = useState<HealthStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,12 +23,27 @@ function App() {
         margin: '0 auto',
       }}
     >
-      <h1>Getting Shit Done</h1>
-      <p>Walking-skeleton deploy — frontend ↔ API health check.</p>
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+        }}
+      >
+        <h1>Getting Shit Done</h1>
+        <span>
+          {user !== null && <>Signed in as {user.email} · </>}
+          <button type="button" onClick={() => void logout()}>
+            Log out
+          </button>
+        </span>
+      </header>
 
-      {error && <p style={{ color: 'crimson' }}>API unreachable: {error}</p>}
-      {!error && !health && <p>Checking API…</p>}
-      {health && (
+      <p>Authenticated. API health check below.</p>
+
+      {error !== null && <p style={{ color: 'crimson' }}>API unreachable: {error}</p>}
+      {error === null && health === null && <p>Checking API…</p>}
+      {health !== null && (
         <dl>
           <dt>Status</dt>
           <dd>{health.status}</dd>
