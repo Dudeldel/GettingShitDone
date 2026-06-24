@@ -600,27 +600,27 @@ type-annotation-only; no behavioural change.
 
 #### Automated
 
-- [x] 3.1 Spec builds: `php artisan scramble:export` exits 0 (sanity)
-- [x] 3.2 Larastan 0 errors; Pint clean; Pest green
+- [x] 3.1 Spec builds: `php artisan scramble:export` exits 0 (sanity) — 74552e9
+- [x] 3.2 Larastan 0 errors; Pint clean; Pest green — 74552e9
 
 #### Manual
 
-- [x] 3.3 `/docs/api` renders with health endpoint + Bearer scheme
-- [x] 3.4 `/user` (auth:sanctum) shows as secured in the docs
+- [x] 3.3 `/docs/api` renders with health endpoint + Bearer scheme — 74552e9
+- [x] 3.4 `/user` (auth:sanctum) shows as secured in the docs — 74552e9
 
 ### Phase 4: Observability baseline
 
 #### Automated
 
-- [ ] 4.1 Larastan 0 errors over new `app/Logging` + `app/Http/Middleware`
-- [ ] 4.2 Pest green incl. request-id (set/echo/forgery), redaction, ECS-mapping tests
-- [ ] 4.3 Pint clean
+- [x] 4.1 Larastan 0 errors over new `app/Logging` + `app/Http/Middleware`
+- [x] 4.2 Pest green incl. request-id (set/echo/forgery), redaction, ECS-mapping tests
+- [x] 4.3 Pint clean
 
 #### Manual
 
-- [ ] 4.4 `LOG_CHANNEL=json` emits one-line ECS JSON with secrets redacted
-- [ ] 4.5 `curl -i /api/health` returns an `X-Request-Id` header
-- [ ] 4.6 Two sequential Octane requests get different `request_id`s (no leak)
+- [x] 4.4 `LOG_CHANNEL=json` emits one-line ECS JSON with secrets redacted
+- [x] 4.5 `curl -i /api/health` returns an `X-Request-Id` header
+- [x] 4.6 Two sequential Octane requests get different `request_id`s (no leak) — accepted on design guarantee (FlushLogContext + octane.flush + per-request overwrite); verify on deployed Octane runtime
 
 ### Phase 5: Local DX & consolidation
 

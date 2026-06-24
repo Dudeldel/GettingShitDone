@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AssignRequestId;
 use Laravel\Octane\Contracts\OperationTerminated;
 use Laravel\Octane\Events\RequestHandled;
 use Laravel\Octane\Events\RequestReceived;
@@ -135,7 +136,11 @@ return [
     ],
 
     'flush' => [
-        //
+        // Forget the per-request id binding between requests so it cannot leak
+        // across requests on a resident worker (e.g. routes that bypass the
+        // AssignRequestId middleware). Shared log context is already reset by
+        // Octane's default FlushLogContext listener.
+        AssignRequestId::CONTAINER_KEY,
     ],
 
     /*
