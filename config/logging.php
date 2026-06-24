@@ -1,5 +1,8 @@
 <?php
 
+use App\Logging\EcsFormatter;
+use App\Logging\Processors\MapContextToEcs;
+use App\Logging\Processors\RedactSensitiveData;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -63,6 +66,23 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+        ],
+
+        // Production channel: single-line ECS JSON on stdout for the log shipper.
+        // Set LOG_CHANNEL=json in production; local/staging stay on the text stack.
+        'json' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stdout',
+            ],
+            'formatter' => EcsFormatter::class,
+            'processors' => [
+                RedactSensitiveData::class,
+                MapContextToEcs::class,
+                PsrLogMessageProcessor::class,
+            ],
         ],
 
         'daily' => [

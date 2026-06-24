@@ -38,7 +38,10 @@ convention — which bootstrapper bakes into the generated agent-instruction fil
 Bootstrapper confidence is verified, so backend scaffolding is smooth. The web
 front is a separate Vite + React SPA (TypeScript) consuming the REST API — chosen
 over the branded Astro starter, whose bundled Supabase backend would collide with
-Laravel+Sanctum; React also eases the later mobile path. Deploy is self-host on
-AWS Lightsail; CI runs on GitHub Actions with auto-deploy on merge. Auth is the
+Laravel+Sanctum; React also eases the later mobile path. Deploy is on Railway (two services —
+Laravel/Octane API + static React SPA, with managed MySQL), chosen over the
+originally-recorded AWS Lightsail co-location after the RAM-headroom gate failed
+(see context/foundation/infrastructure.md and context/deployment/deploy-plan.md);
+CI runs on GitHub Actions (quality gates) and Railway builds on push. Auth is the
 only feature flag set; payments, realtime, AI, and background jobs are out of MVP
 scope per the PRD.

@@ -9,9 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 class HealthController extends Controller
 {
     /**
-     * Liveness probe for the walking-skeleton deploy.
+     * Liveness probe.
      *
      * Proves the full path is wired: nginx -> Octane -> Laravel. Public (no auth).
+     *
+     * @unauthenticated
      */
     public function __invoke(): JsonResponse
     {
