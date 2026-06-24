@@ -2,9 +2,10 @@
 change_id: quality-gates-toolchain
 roadmap_ref: F-01
 title: Quality gates & analysis toolchain (+ buildable observability baseline)
-status: impl_reviewed
+status: archived
 created: 2026-06-24
 updated: 2026-06-24
+archived_at: 2026-06-24T11:14:11Z
 ---
 
 # Change: quality-gates-toolchain

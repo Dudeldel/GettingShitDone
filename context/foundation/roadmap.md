@@ -29,7 +29,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 
 | ID   | Change ID                  | Outcome (user can …)                                              | Prerequisites | PRD refs                          | Status   |
 | ---- | -------------------------- | ---------------------------------------------------------------- | ------------- | --------------------------------- | -------- |
-| F-01 | quality-gates-toolchain    | (foundation) CI runs Pest + Larastan L6 + Scramble on every push | —             | tests/CLAUDE.md gate, NFR         | ready    |
+| F-01 | quality-gates-toolchain    | (foundation) CI runs Pest + Larastan L6 + Scramble on every push | —             | tests/CLAUDE.md gate, NFR         | done     |
 | F-02 | email-password-auth        | (foundation) the one user signs in; API requests are authenticated | F-01        | Access Control, US-01             | proposed |
 | F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | proposed |
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | proposed |
@@ -79,7 +79,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Sequenced first because `main_goal: quality` and the CI gates are a hard convention; the only risk is Larastan level-6 surfacing pre-existing type gaps in the scaffold, caught immediately rather than mid-feature. Minimal scope: install + wire + migrate the example tests — it builds no features.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: Email + password authentication
 
@@ -259,4 +259,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends here — and flips the item's Status to `done` — when a change whose Change ID matches a roadmap item is archived. Do NOT pre-populate.)
+- **F-01: (foundation) CI runs Pest + Larastan L6 + Scramble on every push** — Archived 2026-06-24 → `context/archive/2026-06-24-quality-gates-toolchain/`. Lesson: —.
