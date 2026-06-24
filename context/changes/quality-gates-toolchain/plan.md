@@ -587,26 +587,26 @@ type-annotation-only; no behavioural change.
 
 #### Automated
 
-- [x] 2.1 Static analysis clean: `phpstan analyse --memory-limit=512M` → 0 errors
-- [x] 2.2 Pint still clean: `./vendor/bin/pint --test`
-- [x] 2.3 Pest still green: `php artisan test`
+- [x] 2.1 Static analysis clean: `phpstan analyse --memory-limit=512M` → 0 errors — aeae4e9
+- [x] 2.2 Pint still clean: `./vendor/bin/pint --test` — aeae4e9
+- [x] 2.3 Pest still green: `php artisan test` — aeae4e9
 
 #### Manual
 
-- [x] 2.4 No `phpstan-baseline.neon` created (errors fixed, not grandfathered)
-- [x] 2.5 Fixes are real type improvements, not blanket `ignoreErrors`
+- [x] 2.4 No `phpstan-baseline.neon` created (errors fixed, not grandfathered) — aeae4e9
+- [x] 2.5 Fixes are real type improvements, not blanket `ignoreErrors` — aeae4e9
 
 ### Phase 3: Scramble
 
 #### Automated
 
-- [ ] 3.1 Spec builds: `php artisan scramble:export` exits 0 (sanity)
-- [ ] 3.2 Larastan 0 errors; Pint clean; Pest green
+- [x] 3.1 Spec builds: `php artisan scramble:export` exits 0 (sanity)
+- [x] 3.2 Larastan 0 errors; Pint clean; Pest green
 
 #### Manual
 
-- [ ] 3.3 `/docs/api` renders with health endpoint + Bearer scheme
-- [ ] 3.4 `/user` (auth:sanctum) shows as secured in the docs
+- [x] 3.3 `/docs/api` renders with health endpoint + Bearer scheme
+- [x] 3.4 `/user` (auth:sanctum) shows as secured in the docs
 
 ### Phase 4: Observability baseline
 
