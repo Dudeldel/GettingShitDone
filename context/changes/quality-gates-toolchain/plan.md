@@ -612,24 +612,24 @@ type-annotation-only; no behavioural change.
 
 #### Automated
 
-- [x] 4.1 Larastan 0 errors over new `app/Logging` + `app/Http/Middleware`
-- [x] 4.2 Pest green incl. request-id (set/echo/forgery), redaction, ECS-mapping tests
-- [x] 4.3 Pint clean
+- [x] 4.1 Larastan 0 errors over new `app/Logging` + `app/Http/Middleware` — 1c1d685
+- [x] 4.2 Pest green incl. request-id (set/echo/forgery), redaction, ECS-mapping tests — 1c1d685
+- [x] 4.3 Pint clean — 1c1d685
 
 #### Manual
 
-- [x] 4.4 `LOG_CHANNEL=json` emits one-line ECS JSON with secrets redacted
-- [x] 4.5 `curl -i /api/health` returns an `X-Request-Id` header
-- [x] 4.6 Two sequential Octane requests get different `request_id`s (no leak) — accepted on design guarantee (FlushLogContext + octane.flush + per-request overwrite); verify on deployed Octane runtime
+- [x] 4.4 `LOG_CHANNEL=json` emits one-line ECS JSON with secrets redacted — 1c1d685
+- [x] 4.5 `curl -i /api/health` returns an `X-Request-Id` header — 1c1d685
+- [x] 4.6 Two sequential Octane requests get different `request_id`s (no leak) — accepted on design guarantee (FlushLogContext + octane.flush + per-request overwrite); verify on deployed Octane runtime — 1c1d685
 
 ### Phase 5: Local DX & consolidation
 
 #### Automated
 
-- [ ] 5.1 `composer quality` exits 0
+- [x] 5.1 `composer quality` exits 0
 - [ ] 5.2 Pushed branch shows all CI gates green (Pint, Larastan, Pest, frontend)
 
 #### Manual
 
-- [ ] 5.3 `composer quality` output shows all three gates running and passing
-- [ ] 5.4 `contract-surfaces.md` lists the new load-bearing names
+- [x] 5.3 `composer quality` output shows all three gates running and passing
+- [x] 5.4 `contract-surfaces.md` lists the new load-bearing names
