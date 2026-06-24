@@ -573,28 +573,28 @@ type-annotation-only; no behavioural change.
 
 #### Automated
 
-- [x] 1.1 Pest installed: `./vendor/bin/pest --version` succeeds
-- [x] 1.2 Suite green locally: `php artisan test`
-- [x] 1.3 Suite green in parallel: `./vendor/bin/pest --parallel`
-- [x] 1.4 Pint clean: `./vendor/bin/pint --test`
+- [x] 1.1 Pest installed: `./vendor/bin/pest --version` succeeds — 83adfec
+- [x] 1.2 Suite green locally: `php artisan test` — 83adfec
+- [x] 1.3 Suite green in parallel: `./vendor/bin/pest --parallel` — 83adfec
+- [x] 1.4 Pint clean: `./vendor/bin/pint --test` — 83adfec
 
 #### Manual
 
-- [x] 1.5 No class-based `ExampleTest` files remain; tests read as `it('...')` specs
-- [x] 1.6 Health Feature test fails if `/api/health` is broken (sanity check)
+- [x] 1.5 No class-based `ExampleTest` files remain; tests read as `it('...')` specs — 83adfec
+- [x] 1.6 Health Feature test fails if `/api/health` is broken (sanity check) — 83adfec
 
 ### Phase 2: Larastan level 6
 
 #### Automated
 
-- [ ] 2.1 Static analysis clean: `phpstan analyse --memory-limit=512M` → 0 errors
-- [ ] 2.2 Pint still clean: `./vendor/bin/pint --test`
-- [ ] 2.3 Pest still green: `php artisan test`
+- [x] 2.1 Static analysis clean: `phpstan analyse --memory-limit=512M` → 0 errors
+- [x] 2.2 Pint still clean: `./vendor/bin/pint --test`
+- [x] 2.3 Pest still green: `php artisan test`
 
 #### Manual
 
-- [ ] 2.4 No `phpstan-baseline.neon` created (errors fixed, not grandfathered)
-- [ ] 2.5 Fixes are real type improvements, not blanket `ignoreErrors`
+- [x] 2.4 No `phpstan-baseline.neon` created (errors fixed, not grandfathered)
+- [x] 2.5 Fixes are real type improvements, not blanket `ignoreErrors`
 
 ### Phase 3: Scramble
 

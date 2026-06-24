@@ -31,7 +31,9 @@ jobs:
       - name: Pint (format check)
         run: ./vendor/bin/pint --test
 
-      # Larastan (level 6) slots in here once installed (see tests/CLAUDE.md).
+      - name: Larastan (level 6)
+        run: ./vendor/bin/phpstan analyse --memory-limit=512M --no-progress
+
       - name: Tests (Pest, SQLite in-memory)
         env:
           DB_CONNECTION: sqlite
