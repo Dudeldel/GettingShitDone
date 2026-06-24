@@ -626,10 +626,10 @@ type-annotation-only; no behavioural change.
 
 #### Automated
 
-- [x] 5.1 `composer quality` exits 0
-- [ ] 5.2 Pushed branch shows all CI gates green (Pint, Larastan, Pest, frontend)
+- [x] 5.1 `composer quality` exits 0 — 880cc23
+- [x] 5.2 Pushed branch shows all CI gates green (Pint, Larastan, Pest, frontend) — CI green on 880cc23 (user-confirmed)
 
 #### Manual
 
-- [x] 5.3 `composer quality` output shows all three gates running and passing
-- [x] 5.4 `contract-surfaces.md` lists the new load-bearing names
+- [x] 5.3 `composer quality` output shows all three gates running and passing — 880cc23
+- [x] 5.4 `contract-surfaces.md` lists the new load-bearing names — 880cc23
