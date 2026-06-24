@@ -3,10 +3,23 @@
 use App\Logging\LogEvent;
 use Illuminate\Support\Facades\Log;
 
-it('emits a structured domain event with the event.* envelope', function () {
+/**
+ * Demonstrates the intended pattern: a named static method delegating to the protected
+ * LogEvent::emit() building block. Application code adds such methods to LogEvent itself;
+ * this fixture stands in until the first real domain event lands.
+ */
+class FixtureDomainEvent extends LogEvent
+{
+    public static function itemClarified(string $itemId): void
+    {
+        self::emit('item.clarified.success', 'web', 'success', ['itemId' => $itemId]);
+    }
+}
+
+it('emits a structured domain event with the event.* envelope via a named method', function () {
     Log::spy();
 
-    LogEvent::emit('item.clarified.success', 'web', 'success', ['itemId' => 'ITEM-1']);
+    FixtureDomainEvent::itemClarified('ITEM-1');
 
     Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
         return $level === 'info'

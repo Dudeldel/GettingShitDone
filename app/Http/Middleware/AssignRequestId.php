@@ -13,8 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
  * echoes it back on the response so clients can reference it. Runs first in the `api`
  * group (prepended in bootstrap/app.php) so even auth/bootstrap failures carry an id.
  *
- * An incoming X-Request-Id is honored ONLY if it is a valid UUID — this guards against
- * log forgery via injected newlines / control characters / oversized strings.
+ * An incoming X-Request-Id is honored ONLY if it is a valid UUID (any version) — this
+ * guards against log forgery via injected newlines / control characters / oversized
+ * strings. Generated ids (when none is supplied or it is invalid) are UUID v4.
  */
 class AssignRequestId
 {

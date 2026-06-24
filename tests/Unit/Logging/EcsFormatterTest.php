@@ -19,3 +19,15 @@ it('formats a record as single-line ECS JSON with mapped fields at top level', f
         ->and($decoded['labels']['other'])->toBe('keep')
         ->and($decoded)->toHaveKey('@timestamp');
 });
+
+it('formats records with invalid UTF-8 without throwing (relies on Monolog substitute flag)', function () {
+    $line = (new EcsFormatter)->format(
+        makeLogRecord(context: ['bad' => "\xB1\x31"], message: "msg \xFF end")
+    );
+
+    $decoded = json_decode(rtrim($line), true);
+
+    expect($line)->toEndWith("\n")
+        ->and($decoded)->not->toBeNull()
+        ->and($decoded['message'])->toBeString();
+});
