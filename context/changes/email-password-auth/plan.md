@@ -453,12 +453,12 @@ set per environment on Railway; changing the frontend domain requires updating i
 
 #### Automated
 
-- [x] 3.1 `composer quality` exits 0
-- [x] 3.2 `npm run build` and `npm run lint` green
-- [x] 3.3 Scramble export still succeeds: `php artisan scramble:export`
+- [x] 3.1 `composer quality` exits 0 — ce81023
+- [x] 3.2 `npm run build` and `npm run lint` green — ce81023
+- [x] 3.3 Scramble export still succeeds: `php artisan scramble:export` — ce81023
 
 #### Manual
 
-- [x] 3.4 End-to-end: SPA login → token → `/me` succeeds cross-origin
-- [x] 3.5 A non-allowed origin is blocked by CORS
-- [x] 3.6 `/docs/api` shows auth endpoints (login/register unauth; `/me`, logout secured)
+- [x] 3.4 End-to-end: SPA login → token → `/me` succeeds cross-origin — ce81023
+- [x] 3.5 A non-allowed origin is blocked by CORS — ce81023
+- [x] 3.6 `/docs/api` shows auth endpoints (login/register unauth; `/me`, logout secured) — ce81023
