@@ -31,12 +31,12 @@ jobs:
       - name: Pint (format check)
         run: ./vendor/bin/pint --test
 
-      # Pest + Larastan (level 6) slot in here once installed (see tests/CLAUDE.md).
-      - name: Tests (SQLite in-memory)
+      # Larastan (level 6) slots in here once installed (see tests/CLAUDE.md).
+      - name: Tests (Pest, SQLite in-memory)
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
-        run: php artisan test
+        run: ./vendor/bin/pest --parallel
 
   frontend:
     name: Frontend gates
