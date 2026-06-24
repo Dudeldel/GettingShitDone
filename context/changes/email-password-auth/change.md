@@ -1,7 +1,7 @@
 ---
 change_id: email-password-auth
 title: Email + password authentication (Sanctum, single user)
-status: implemented
+status: impl_reviewed
 created: 2026-06-24
 updated: 2026-06-24
 archived_at: null

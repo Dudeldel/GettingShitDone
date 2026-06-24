@@ -7,15 +7,11 @@ use App\Dto\Payload\RegisterPayload;
 use App\Dto\UserDto;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserRepository implements UserRepositoryInterface
 {
-    public function anyUserExists(): bool
-    {
-        return User::query()->exists();
-    }
-
     public function verifyCredentials(string $email, string $password): ?int
     {
         $user = User::query()->where('email', $email)->first();
@@ -27,15 +23,23 @@ class UserRepository implements UserRepositoryInterface
         return (int) $user->getKey();
     }
 
-    public function createUser(RegisterPayload $payload): int
+    public function createFirstUserOrNull(RegisterPayload $payload): ?int
     {
-        $user = User::query()->create([
-            'name' => $payload->name,
-            'email' => $payload->email,
-            'password' => $payload->password, // hashed by the model's 'password' cast
-        ]);
+        return DB::transaction(function () use ($payload): ?int {
+            // Lock so concurrent first-run registers serialize (MySQL FOR UPDATE;
+            // SQLite serializes writes within the transaction).
+            if (User::query()->lockForUpdate()->exists()) {
+                return null;
+            }
 
-        return (int) $user->getKey();
+            $user = User::query()->create([
+                'name' => $payload->name,
+                'email' => $payload->email,
+                'password' => $payload->password, // hashed by the model's 'password' cast
+            ]);
+
+            return (int) $user->getKey();
+        });
     }
 
     public function issueToken(int $userId): string

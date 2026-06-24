@@ -53,9 +53,16 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $userId = (int) $request->user()?->getAuthIdentifier();
+        $user = $request->user();
 
-        return response()->json($this->auth->me($userId), Response::HTTP_OK);
+        if ($user === null) {
+            abort(Response::HTTP_UNAUTHORIZED);
+        }
+
+        return response()->json(
+            $this->auth->me((int) $user->getAuthIdentifier()),
+            Response::HTTP_OK,
+        );
     }
 
     /**

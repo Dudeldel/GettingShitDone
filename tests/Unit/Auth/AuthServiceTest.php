@@ -8,28 +8,23 @@ use App\Services\AuthService;
 
 /**
  * Hand-rolled fake repository — keeps this a true unit test (no app, no DB, no Mockery
- * lifecycle). The register gate is proven by the exception type: the closed case throws
- * RegistrationClosedException before createUser is reached.
+ * lifecycle). The atomic gate lives in createFirstUserOrNull (returns null when an
+ * account already exists); the Service maps null -> RegistrationClosedException.
  */
-function fakeUserRepository(bool $anyUserExists): UserRepositoryInterface
+function fakeUserRepository(bool $accountExists): UserRepositoryInterface
 {
-    return new class($anyUserExists) implements UserRepositoryInterface
+    return new class($accountExists) implements UserRepositoryInterface
     {
         public function __construct(private bool $exists) {}
-
-        public function anyUserExists(): bool
-        {
-            return $this->exists;
-        }
 
         public function verifyCredentials(string $email, string $password): ?int
         {
             return null;
         }
 
-        public function createUser(RegisterPayload $payload): int
+        public function createFirstUserOrNull(RegisterPayload $payload): ?int
         {
-            return 1;
+            return $this->exists ? null : 1;
         }
 
         public function issueToken(int $userId): string
@@ -46,14 +41,14 @@ function fakeUserRepository(bool $anyUserExists): UserRepositoryInterface
     };
 }
 
-it('refuses to register when an account already exists, without creating a user', function () {
-    $service = new AuthService(fakeUserRepository(anyUserExists: true));
+it('refuses to register when an account already exists', function () {
+    $service = new AuthService(fakeUserRepository(accountExists: true));
 
     $service->register(new RegisterPayload('Owner', 'owner@example.com', 'password123'));
 })->throws(RegistrationClosedException::class);
 
 it('issues a token + user when registering the first account', function () {
-    $service = new AuthService(fakeUserRepository(anyUserExists: false));
+    $service = new AuthService(fakeUserRepository(accountExists: false));
 
     $result = $service->register(new RegisterPayload('Owner', 'owner@example.com', 'password123'));
 

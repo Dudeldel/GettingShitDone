@@ -15,7 +15,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api
         .me()
         .then(setUser)
-        .catch(() => api.clearToken())
+        // A 401 already clears the token in api.request(); on transient errors
+        // (network/5xx) keep it so a later reload can retry the session.
+        .catch(() => undefined)
         .finally(() => setReady(true))
     }
   }, [])

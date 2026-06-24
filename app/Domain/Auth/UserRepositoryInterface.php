@@ -11,14 +11,17 @@ use App\Dto\UserDto;
  */
 interface UserRepositoryInterface
 {
-    public function anyUserExists(): bool;
-
     /**
      * Verify email + password; return the user id on success, null otherwise.
      */
     public function verifyCredentials(string $email, string $password): ?int;
 
-    public function createUser(RegisterPayload $payload): int;
+    /**
+     * Atomically create the first account: returns the new user id, or null if an
+     * account already exists. The check-and-create is serialized (transaction + lock)
+     * so concurrent first-run registers cannot both succeed (single-account invariant).
+     */
+    public function createFirstUserOrNull(RegisterPayload $payload): ?int;
 
     /**
      * Issue a personal-access token for the user; return the plain-text token.

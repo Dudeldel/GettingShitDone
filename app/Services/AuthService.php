@@ -34,11 +34,12 @@ class AuthService
 
     public function register(RegisterPayload $payload): AuthResultDto
     {
-        if ($this->users->anyUserExists()) {
+        // Atomic single-account gate: null means an account already exists.
+        $userId = $this->users->createFirstUserOrNull($payload);
+
+        if ($userId === null) {
             throw new RegistrationClosedException;
         }
-
-        $userId = $this->users->createUser($payload);
 
         return new AuthResultDto(
             token: $this->users->issueToken($userId),
