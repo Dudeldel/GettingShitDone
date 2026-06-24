@@ -57,3 +57,43 @@ that delegate here.
 
 Backend job: Pint (format) → Larastan level 6 → Pest (`--parallel`, SQLite `:memory:`).
 Frontend job: `npm ci` → lint → build. All must pass before merge.
+
+## Auth endpoints
+
+`routes/api.php` — Sanctum **Bearer-token** auth (single user). Public, rate-limited
+(`throttle:login`): `POST /api/login` → `{token, user}`; `POST /api/register` → first-run
+only (403 once an account exists). Behind `auth:sanctum`: `GET /api/me` → the user;
+`POST /api/logout` → revokes the current token (204). Future protected endpoints (S-01
+capture, …) join the `['auth:sanctum', LogContextMiddleware]` group.
+
+## AuthService
+
+`app/Services/AuthService.php` — orchestrates `login` / `register` (gated) / `me` /
+`logout`. HTTP-free; signals failure with domain exceptions
+(`InvalidCredentialsException` → 401, `RegistrationClosedException` → 403) mapped in
+`bootstrap/app.php`. Built from `LoginPayload` / `RegisterPayload`.
+
+## UserRepositoryInterface
+
+`app/Domain/Auth/UserRepositoryInterface.php` (impl `app/Infrastructure/Auth/UserRepository.php`,
+bound in `AppServiceProvider::register`). Confines Eloquent + Sanctum; returns DTOs/scalars,
+never a Model. Token issuance/revocation live here. `revokeCurrentToken` resolves the user
+via the **sanctum** guard (the default web guard is null on a token request).
+
+## LogContextMiddleware
+
+`app/Http/Middleware/LogContextMiddleware.php` — pushes `user_id` into `Log::shareContext`
+(mapped to `user.id` by `MapContextToEcs`). Registered INSIDE the `auth:sanctum` group, so
+it only runs once a user is resolved. Closes the F-03 observability remainder.
+
+## Frontend auth (AuthContext / token)
+
+`frontend/src/auth/` — `AuthProvider` + `useAuth` (in `context.ts`), `LoginPage`,
+`ProtectedRoute`. Token stored in `localStorage` under key `gsd_token`; `api.ts` injects
+`Authorization: Bearer` and clears the token + signals logout on any 401. `VITE_API_BASE_URL`
+sets the API origin; CORS on the backend must allow the SPA origin (`FRONTEND_URL`).
+
+## login rate limiter
+
+`AppServiceProvider::boot()` — named `RateLimiter::for('login')`, 5/min keyed by email+IP,
+applied via `throttle:login` on the login + register routes. Exceeding → 429.

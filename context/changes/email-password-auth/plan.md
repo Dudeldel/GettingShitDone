@@ -439,26 +439,26 @@ set per environment on Railway; changing the frontend domain requires updating i
 
 #### Automated
 
-- [x] 2.1 Type check + build: `npm run build`
-- [x] 2.2 Lint: `npm run lint`
+- [x] 2.1 Type check + build: `npm run build` — b84c86b
+- [x] 2.2 Lint: `npm run lint` — b84c86b
 
 #### Manual
 
-- [x] 2.3 Visiting `/` logged out redirects to `/login`
-- [x] 2.4 Login stores the token and lands on the authenticated shell
-- [x] 2.5 Refresh keeps the session (token rehydrated)
-- [x] 2.6 Logout clears state and returns to `/login`
+- [x] 2.3 Visiting `/` logged out redirects to `/login` — b84c86b
+- [x] 2.4 Login stores the token and lands on the authenticated shell — b84c86b
+- [x] 2.5 Refresh keeps the session (token rehydrated) — b84c86b
+- [x] 2.6 Logout clears state and returns to `/login` — b84c86b
 
 ### Phase 3: Integration & hardening
 
 #### Automated
 
-- [ ] 3.1 `composer quality` exits 0
-- [ ] 3.2 `npm run build` and `npm run lint` green
-- [ ] 3.3 Scramble export still succeeds: `php artisan scramble:export`
+- [x] 3.1 `composer quality` exits 0
+- [x] 3.2 `npm run build` and `npm run lint` green
+- [x] 3.3 Scramble export still succeeds: `php artisan scramble:export`
 
 #### Manual
 
-- [ ] 3.4 End-to-end: SPA login → token → `/me` succeeds cross-origin
-- [ ] 3.5 A non-allowed origin is blocked by CORS
-- [ ] 3.6 `/docs/api` shows auth endpoints (login/register unauth; `/me`, logout secured)
+- [x] 3.4 End-to-end: SPA login → token → `/me` succeeds cross-origin
+- [x] 3.5 A non-allowed origin is blocked by CORS
+- [x] 3.6 `/docs/api` shows auth endpoints (login/register unauth; `/me`, logout secured)
