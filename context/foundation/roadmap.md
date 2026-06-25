@@ -3,7 +3,7 @@ project: "Getting Shit Done"
 version: 1
 status: draft
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-25
 prd_version: 1
 main_goal: quality
 top_blocker: skills
@@ -31,7 +31,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | ---- | -------------------------- | ---------------------------------------------------------------- | ------------- | --------------------------------- | -------- |
 | F-01 | quality-gates-toolchain    | (foundation) CI runs Pest + Larastan L6 + Scramble on every push | —             | tests/CLAUDE.md gate, NFR         | done     |
 | F-02 | email-password-auth        | (foundation) the one user signs in; API requests are authenticated | F-01        | Access Control, US-01             | proposed |
-| F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | proposed |
+| F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | done (absorbed by F-01+F-02) |
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | proposed |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | proposed |
 | S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | proposed |
@@ -53,6 +53,30 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | C      | Clarify core & branches     | `S-02` → `S-03` / `S-04`           | The GTD heart; joins Stream B at `S-01` and needs `F-03` for LogEvent.    |
 | D      | Buckets, dates & review      | `S-05` → `S-06` / `S-09`           | Read/organize surfaces; builds on `S-01`, meaningful once `S-02` routes.  |
 | E      | Metadata & prioritization   | `S-07` → `S-08`                    | Cheap-win fields that feed the Eisenhower view; builds on `S-01`/`S-02`.  |
+
+## Parallel waves
+
+Which items can run concurrently (separate agent runs / sessions), derived from the
+dependency graph. Recorded 2026-06-25, after F-01 done + F-02 implemented + F-03 absorbed.
+
+**Gateway — must run solo:** `S-01` (`capture-to-inbox`) lays the item domain spine
+(`items` table, `GtdBucket` enum, Item model/repository/DTO) that 6 other slices import.
+Build it alone first; nothing parallelizes with it.
+
+| Wave | Runs in parallel | Each needs |
+| ---- | ---------------- | ---------- |
+| Gateway | `S-01` (solo) | F-02 |
+| A | `S-02` ∥ `S-05` ∥ `S-07` | each only needs S-01 (S-02 also F-03, done) |
+| B | `S-03` ∥ `S-04` ∥ `S-06` ∥ `S-08` ∥ `S-09` | S-03/S-04←S-02 · S-06←S-01+S-05 · S-08←S-02+S-07 · S-09←S-05 |
+
+Within a wave, no item depends on another, so they are dependency-parallel. **Caveats:**
+(1) Wave-A/B slices add columns/fields to the **same `items` table + Item model/DTO**, so
+concurrent agents will collide on migrations/model — use git-worktree isolation per slice,
+distinct migration timestamps, and reconcile the Item model at integration. (2) The #1
+blocker is `skills`, not `capacity`; parallelism is the lever for a capacity constraint, so
+running the full 5-wide Wave B at once mostly multiplies integration cost for a solo dev —
+the graph *permits* it, it isn't necessarily *wise*. Lowest-conflict first parallel pair:
+`S-02` (clarify) + `S-05` (bucket views) — mostly different surfaces.
 
 ## Baseline
 
@@ -107,7 +131,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Whether Octane's persistent workers need explicit log-context flushing between requests (`Log::flushSharedContext`) as documented for queues. Owner: user. Block: no.
 - **Risk:** Sequenced early because `quality` goal does not defer observability behind features, and the `skills` blocker makes request correlation valuable before feature work on Octane. Scoped to request-id + JSON channel + `LogEvent` skeleton — NOT a full ECS shipping pipeline (that stays out of MVP).
-- **Status:** proposed
+- **Status:** done (absorbed)
+- **Absorbed:** no separate change was needed — every piece shipped across **F-01** (`AssignRequestId` request-id middleware, the `json`/ECS log channel + `EcsFormatter` + redaction/flat→ECS processors, the `LogEvent` helper, Octane-safe per-request flush) and **F-02** (`LogContextMiddleware` wiring `user_id` into `Log::shareContext` inside the auth group). Nothing remains; closed without its own `/10x-new` cycle. Verified green under F-01/F-02 gates.
 
 ## Slices
 
