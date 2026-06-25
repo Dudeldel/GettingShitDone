@@ -30,7 +30,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | ID   | Change ID                  | Outcome (user can …)                                              | Prerequisites | PRD refs                          | Status   |
 | ---- | -------------------------- | ---------------------------------------------------------------- | ------------- | --------------------------------- | -------- |
 | F-01 | quality-gates-toolchain    | (foundation) CI runs Pest + Larastan L6 + Scramble on every push | —             | tests/CLAUDE.md gate, NFR         | done     |
-| F-02 | email-password-auth        | (foundation) the one user signs in; API requests are authenticated | F-01        | Access Control, US-01             | proposed |
+| F-02 | email-password-auth        | (foundation) the one user signs in; API requests are authenticated | F-01        | Access Control, US-01             | done     |
 | F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | done (absorbed by F-01+F-02) |
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | proposed |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | proposed |
@@ -117,7 +117,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Sanctum cookie (SPA) vs. token auth across the two Railway origins — `infrastructure.md` notes CORS is currently `*` and must tighten when auth lands. Owner: user. Block: no.
 - **Risk:** Minimal-scope enabler (login / register / logout + route protection + a login screen), NOT a full account-management suite — password reset, OAuth, and magic link are explicit Non-Goals/v2. After it lands, `S-01` still exercises auth through a real capture flow, keeping the slice vertical.
-- **Status:** proposed
+- **Status:** done
 
 ### F-03: Observability baseline
 
@@ -285,3 +285,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 - **F-01: (foundation) CI runs Pest + Larastan L6 + Scramble on every push** — Archived 2026-06-24 → `context/archive/2026-06-24-quality-gates-toolchain/`. Lesson: —.
+- **F-02: (foundation) the one user signs in; API requests are authenticated** — Archived 2026-06-25 → `context/archive/2026-06-24-email-password-auth/`. Lesson: —.
