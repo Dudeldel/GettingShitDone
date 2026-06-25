@@ -1,10 +1,13 @@
 <?php
 
+use App\Exceptions\InvalidCredentialsException;
+use App\Exceptions\RegistrationClosedException;
 use App\Http\Middleware\AssignRequestId;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,5 +23,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
+        );
+
+        // Map auth domain exceptions to HTTP status (keeps AuthService HTTP-free).
+        $exceptions->render(
+            fn (InvalidCredentialsException $e) => response()->json(
+                ['message' => $e->getMessage()], Response::HTTP_UNAUTHORIZED,
+            ),
+        );
+        $exceptions->render(
+            fn (RegistrationClosedException $e) => response()->json(
+                ['message' => $e->getMessage()], Response::HTTP_FORBIDDEN,
+            ),
         );
     })->create();

@@ -2,9 +2,14 @@
 
 namespace App\Providers;
 
+use App\Domain\Auth\UserRepositoryInterface;
+use App\Infrastructure\Auth\UserRepository;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -14,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
     }
 
     /**
@@ -28,5 +33,12 @@ class AppServiceProvider extends ServiceProvider
             ->withDocumentTransformers(function (OpenApi $openApi): void {
                 $openApi->secure(SecurityScheme::http('bearer'));
             });
+
+        // Brute-force protection for the auth endpoints, keyed by email + IP.
+        RateLimiter::for('login', function (Request $request): Limit {
+            $email = mb_strtolower((string) $request->input('email'));
+
+            return Limit::perMinute(5)->by($email.'|'.(string) $request->ip());
+        });
     }
 }
