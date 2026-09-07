@@ -1,16 +1,73 @@
-import { type FormEvent, useState } from 'react'
-import { captureItem, type Item } from '../api'
+import { type FormEvent, useRef, useState } from 'react'
+import { ApiError, captureItem, type Item, TITLE_MAX_LENGTH } from '../api'
+
+// The draft outlives the component on purpose. A 401 clears the token, flips the app to
+// logged-out and unmounts this form before the error can even paint — so state kept only
+// in useState would take the user's captured idea with it, breaking the PRD guardrail
+// "capture never loses an entry". Session storage also survives a refresh or a tab crash.
+const DRAFT_KEY = 'gsd_capture_draft'
+
+function readDraft(): string {
+  try {
+    return sessionStorage.getItem(DRAFT_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeDraft(value: string): void {
+  try {
+    if (value === '') {
+      sessionStorage.removeItem(DRAFT_KEY)
+    } else {
+      sessionStorage.setItem(DRAFT_KEY, value)
+    }
+  } catch {
+    // Private-mode storage can throw; the in-memory state still works.
+  }
+}
+
+function messageFor(err: unknown): string {
+  if (!(err instanceof ApiError)) {
+    return 'Could not reach the server. Your text is still here — try again.'
+  }
+
+  switch (err.status) {
+    case 401:
+      return 'Your session expired. Sign in again — your text is saved here.'
+    case 422:
+      // The backend writes these for the user; retrying unchanged would never work.
+      return err.message
+    case 429:
+      return 'Too many requests. Wait a moment and try again.'
+    default:
+      return err.message
+  }
+}
 
 export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }) {
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(readDraft)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function update(value: string): void {
+    setTitle(value)
+    writeDraft(value)
+    setSaved(false)
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
 
-    if (title.trim() === '') {
+    const submitted = title.trim()
+
+    if (submitted === '') {
+      setSaved(false)
+      setError('Type something first.')
+      inputRef.current?.focus()
+
       return
     }
 
@@ -19,41 +76,55 @@ export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }
     setSubmitting(true)
 
     try {
-      const item = await captureItem(title.trim())
-      // Clear only once the server has confirmed. A failed capture must never cost the
-      // user the text they typed — that is the PRD guardrail this screen exists to keep.
-      setTitle('')
+      const item = await captureItem(submitted)
+      // Clear only what was actually sent: the input stays enabled during the round trip,
+      // so the user may already have started the next idea.
+      setTitle((current) => {
+        const next = current === submitted ? '' : current
+        writeDraft(next)
+
+        return next
+      })
       setSaved(true)
       onCaptured(item)
-    } catch {
-      setError('Could not save that. Your text is still here — try again.')
+    } catch (err) {
+      setError(messageFor(err))
     } finally {
       setSubmitting(false)
+      inputRef.current?.focus()
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ margin: '1.5rem 0' }}>
-      <label style={{ display: 'block' }}>
+    <form onSubmit={handleSubmit} style={{ margin: '1.5rem 0' }} aria-busy={submitting}>
+      <label htmlFor="capture-title" style={{ display: 'block' }}>
         Catch an idea
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value)
-            setSaved(false)
-          }}
-          disabled={submitting}
-          autoFocus
-          placeholder="What just crossed your mind?"
-          style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-        />
       </label>
+      <input
+        id="capture-title"
+        ref={inputRef}
+        type="text"
+        value={title}
+        onChange={(e) => update(e.target.value)}
+        maxLength={TITLE_MAX_LENGTH}
+        required
+        autoFocus
+        aria-invalid={error !== null}
+        aria-describedby="capture-error capture-status"
+        placeholder="What just crossed your mind?"
+        style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+      />
+      {/* Both live regions are always mounted: adding aria-live at the same moment as the
+          text is unreliable across screen readers. */}
       <button type="submit" disabled={submitting} style={{ marginTop: '0.5rem' }}>
         {submitting ? 'Saving…' : 'Capture'}
       </button>
-      {error !== null && <p style={{ color: 'crimson' }}>{error}</p>}
-      {error === null && saved && <p style={{ color: 'seagreen' }}>Saved to your Inbox.</p>}
+      <p id="capture-error" role="alert" style={{ color: 'var(--error)' }}>
+        {error ?? ''}
+      </p>
+      <p id="capture-status" role="status" style={{ color: 'var(--success)' }}>
+        {error === null && saved ? 'Saved to your Inbox.' : ''}
+      </p>
     </form>
   )
 }

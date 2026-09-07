@@ -34,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: async () => {
         try {
           await api.logout()
+        } catch {
+          // The finally below clears local state regardless, so a failed server-side
+          // revoke must not surface as an unhandled rejection at the call site.
         } finally {
           api.clearToken()
           setUser(null)

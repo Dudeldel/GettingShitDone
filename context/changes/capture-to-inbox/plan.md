@@ -575,15 +575,15 @@ drops `items`. Fresh installs and existing databases both reach the same state w
 
 #### Automated
 
-- [x] 3.1 Frontend build and typecheck pass
-- [x] 3.2 Frontend lint passes
+- [x] 3.1 Frontend build and typecheck pass — c524a9d
+- [x] 3.2 Frontend lint passes — c524a9d
 
 #### Manual
 
-- [x] 3.3 Capture confirms and lists in under ~2 seconds
-- [x] 3.4 Item survives a page reload
-- [x] 3.5 API failure shows an error and preserves the typed text
-- [x] 3.6 Inbox list shows newest first
+- [x] 3.3 Capture confirms and lists in under ~2 seconds — c524a9d
+- [x] 3.4 Item survives a page reload — c524a9d
+- [x] 3.5 API failure shows an error and preserves the typed text — c524a9d
+- [x] 3.6 Inbox list shows newest first — c524a9d
 
 ### Phase 4: Documentation, gates and end-to-end verification
 

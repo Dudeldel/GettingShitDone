@@ -1,5 +1,9 @@
 // API client for the GSD SPA. Same-origin by default; override with VITE_API_BASE_URL.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+// Without this a black-holing connection (captive portal, dropped VPN) leaves the
+// promise unsettled forever, so the UI can never report success or failure.
+const REQUEST_TIMEOUT_MS = 10_000
+const TIMEOUT_STATUS = 408
 const TOKEN_KEY = 'gsd_token'
 
 export function getToken(): string | null {
@@ -41,7 +45,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new ApiError(TIMEOUT_STATUS, 'The server did not respond in time.')
+    }
+    throw err
+  }
 
   if (res.status === 401) {
     clearToken()
@@ -112,26 +128,27 @@ export function logout(): Promise<void> {
   return request<void>('/api/logout', { method: 'POST' })
 }
 
-// --- Health check (preserved from the walking skeleton; no longer rendered in the UI) ---
-
-export interface HealthStatus {
-  status: string
-  app: string
-  environment: string
-  time: string
-}
-
-export function fetchHealth(): Promise<HealthStatus> {
-  return request<HealthStatus>('/api/health')
-}
-
 // --- GTD items ---
+
+/** Mirrors App\Domain\Item\GtdBucket — the backend validates against exactly these. */
+export type GtdBucket =
+  | 'inbox'
+  | 'next_actions'
+  | 'projects'
+  | 'calendar'
+  | 'delegation'
+  | 'someday_maybe'
+  | 'reference'
+  | 'trash'
+
+/** Mirrors App\Const\ItemConst::TITLE_MAX_LENGTH. */
+export const TITLE_MAX_LENGTH = 255
 
 export interface Item {
   id: number
   title: string
   note: string | null
-  bucket: string
+  bucket: GtdBucket
   // Dormant until S-06 (dates) and S-07 (metadata): the API always returns null today,
   // so the shape stays stable when those slices start filling them.
   dueDate: string | null
@@ -150,7 +167,7 @@ export function captureItem(title: string, note?: string): Promise<Item> {
   })
 }
 
-export function listItems(bucket?: string): Promise<Item[]> {
+export function listItems(bucket?: GtdBucket): Promise<Item[]> {
   const query = bucket === undefined ? '' : `?bucket=${encodeURIComponent(bucket)}`
 
   return request<Item[]>(`/api/items${query}`)

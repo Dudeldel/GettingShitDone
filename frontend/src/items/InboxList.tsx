@@ -8,7 +8,7 @@ function capturedAt(iso: string): string {
 
 export function InboxList({ items }: { items: Item[] }) {
   if (items.length === 0) {
-    return <p style={{ color: '#666' }}>Your Inbox is empty. Type an idea above to capture it.</p>
+    return <p style={{ color: 'var(--muted)' }}>Your Inbox is empty. Type an idea above to capture it.</p>
   }
 
   return (
@@ -16,20 +16,14 @@ export function InboxList({ items }: { items: Item[] }) {
     // with what the API considers the order.
     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
       {items.map((item) => (
-        <li
-          key={item.id}
-          style={{
-            borderTop: '1px solid #ddd',
-            padding: '0.6rem 0',
-          }}
-        >
-          <div>{item.title}</div>
-          {item.note !== null && (
-            <div style={{ color: '#555', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
+        <li key={item.id} style={{ borderTop: '1px solid var(--border)', padding: '0.6rem 0' }}>
+          <div style={{ color: 'var(--text-h)' }}>{item.title}</div>
+          {item.note !== null && item.note !== '' && (
+            <div style={{ color: 'var(--text)', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
               {item.note}
             </div>
           )}
-          <time dateTime={item.createdAt} style={{ color: '#888', fontSize: '0.8em' }}>
+          <time dateTime={item.createdAt} style={{ color: 'var(--muted)', fontSize: '0.8em' }}>
             {capturedAt(item.createdAt)}
           </time>
         </li>
