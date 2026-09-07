@@ -189,16 +189,16 @@ final class FreeTextSanitizer
 
         return $sanitized ?? $value;
     }
-    public static function sanitizeNullable(?string $value): ?string
-    {
-        return $value === null ? null : self::sanitize($value);
-    }
 }
 
-// In the FormRequest
+// In the FormRequest — guard on is_string() rather than a nullable helper: a payload like
+// {"note": []} then falls through to the `string` rule (422) instead of raising a
+// TypeError (500).
 protected function prepareForValidation(): void
 {
-    $this->merge(['note' => FreeTextSanitizer::sanitizeNullable($this->input('note'))]);
+    $note = $this->input('note');
+
+    $this->merge(['note' => is_string($note) ? FreeTextSanitizer::sanitize($note) : $note]);
 }
 ```
 

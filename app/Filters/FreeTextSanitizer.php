@@ -23,9 +23,4 @@ final class FreeTextSanitizer
 
         return $sanitized ?? $value;
     }
-
-    public static function sanitizeNullable(?string $value): ?string
-    {
-        return $value === null ? null : self::sanitize($value);
-    }
 }

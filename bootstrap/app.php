@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\InvalidCredentialsException;
+use App\Exceptions\ItemPersistenceException;
 use App\Exceptions\RegistrationClosedException;
 use App\Http\Middleware\AssignRequestId;
 use Illuminate\Foundation\Application;
@@ -34,6 +35,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(
             fn (RegistrationClosedException $e) => response()->json(
                 ['message' => $e->getMessage()], Response::HTTP_FORBIDDEN,
+            ),
+        );
+        // Deliberately a fixed message: the exception itself carries only a SQLSTATE code,
+        // and the response must not echo anything derived from the failed write.
+        $exceptions->render(
+            fn (ItemPersistenceException $e) => response()->json(
+                ['message' => 'The item could not be saved. Please try again.'],
+                Response::HTTP_INTERNAL_SERVER_ERROR,
             ),
         );
     })->create();

@@ -26,15 +26,4 @@ class CaptureItemPayload
             note: isset($data['note']) ? (string) $data['note'] : null,
         );
     }
-
-    /**
-     * @return array{title: string, note: string|null}
-     */
-    public function toArray(): array
-    {
-        return [
-            'title' => $this->title,
-            'note' => $this->note,
-        ];
-    }
 }

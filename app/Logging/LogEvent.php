@@ -32,6 +32,20 @@ class LogEvent
     }
 
     /**
+     * A capture could not be persisted (FR-001, guardrail "capture never loses an entry").
+     *
+     * @param  GtdBucket  $bucket  the intended destination
+     * @param  string  $sqlState  driver SQLSTATE code — never the query or its bindings
+     */
+    public static function itemCaptureFailed(GtdBucket $bucket, string $sqlState): void
+    {
+        self::emit('item.captured.failure', 'database', 'failure', [
+            'bucket' => $bucket->value,
+            'reason' => $sqlState,
+        ], 'error');
+    }
+
+    /**
      * Build and emit a structured domain event. Protected on purpose: callers use the
      * named methods added to this class, not a free-form emitter.
      *

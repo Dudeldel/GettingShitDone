@@ -37,6 +37,18 @@ class AppServiceProvider extends ServiceProvider
                 $openApi->secure(SecurityScheme::http('bearer'));
             });
 
+        // Blanket cap on the API, keyed by user when there is one and by IP otherwise.
+        // NOTE: Laravel's middleware priority list puts Authenticate ahead of
+        // ThrottleRequests, so this runs AFTER auth on the protected group — it caps a
+        // leaked bearer token (the asymmetry with the 5/min login limiter), it does not
+        // shield the token lookup from an unauthenticated flood. Closing that would mean
+        // reordering the global middleware priority, which is out of scope here.
+        RateLimiter::for('api', function (Request $request): Limit {
+            return Limit::perMinute(60)->by(
+                (string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
+            );
+        });
+
         // Brute-force protection for the auth endpoints, keyed by email + IP.
         RateLimiter::for('login', function (Request $request): Limit {
             $email = mb_strtolower((string) $request->input('email'));

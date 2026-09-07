@@ -15,16 +15,6 @@ class ListItemsRequest extends FormRequest
     }
 
     /**
-     * Absent or empty means the Inbox, so the rules can treat the field as always present.
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->input('bucket') === null) {
-            $this->merge(['bucket' => GtdBucket::Inbox->value]);
-        }
-    }
-
-    /**
      * @return array<string, list<string|Enum>>
      */
     public function rules(): array
@@ -35,7 +25,7 @@ class ListItemsRequest extends FormRequest
              *
              * @query
              */
-            'bucket' => ['required', Rule::enum(GtdBucket::class)],
+            'bucket' => ['nullable', Rule::enum(GtdBucket::class)],
         ];
     }
 
@@ -44,6 +34,8 @@ class ListItemsRequest extends FormRequest
      */
     public function bucket(): GtdBucket
     {
-        return GtdBucket::from((string) $this->validated('bucket'));
+        $bucket = $this->validated('bucket');
+
+        return is_string($bucket) ? GtdBucket::from($bucket) : GtdBucket::default();
     }
 }

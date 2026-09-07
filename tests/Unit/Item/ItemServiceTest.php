@@ -1,55 +1,15 @@
 <?php
 
 use App\Domain\Item\GtdBucket;
-use App\Domain\Item\ItemRepositoryInterface;
-use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Exceptions\ItemPersistenceException;
 use App\Services\ItemService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 // Boots the app because LogEvent goes through the Log facade, but no database — the
 // repository is a hand-rolled fake, as in tests/Unit/Auth/AuthServiceTest.php.
 uses(TestCase::class);
-
-/**
- * Hand-rolled fake repository recording what the service asked it for. No return type on
- * purpose: the tests read the recorder properties off the anonymous class.
- */
-function fakeItemRepository()
-{
-    return new class implements ItemRepositoryInterface
-    {
-        public ?GtdBucket $createdInBucket = null;
-
-        public ?CaptureItemPayload $createdFrom = null;
-
-        public ?GtdBucket $listedBucket = null;
-
-        public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
-        {
-            $this->createdFrom = $payload;
-            $this->createdInBucket = $bucket;
-
-            return new ItemDto(
-                id: 42,
-                title: $payload->title,
-                note: $payload->note,
-                bucket: $bucket,
-                createdAt: '2026-09-07T10:00:00+00:00',
-                updatedAt: '2026-09-07T10:00:00+00:00',
-            );
-        }
-
-        public function listByBucket(GtdBucket $bucket): Collection
-        {
-            $this->listedBucket = $bucket;
-
-            return new Collection;
-        }
-    };
-}
 
 it('captures into the Inbox regardless of what the caller passes', function () {
     $repo = fakeItemRepository();
@@ -80,4 +40,21 @@ it('delegates listing to the repository with the requested bucket', function () 
     (new ItemService($repo))->listByBucket(GtdBucket::Reference);
 
     expect($repo->listedBucket)->toBe(GtdBucket::Reference);
+});
+
+it('emits a failure event and rethrows when the write fails', function () {
+    Log::spy();
+
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true)))
+        ->capture(new CaptureItemPayload('my bank pin is 4711', null)))
+        ->toThrow(ItemPersistenceException::class);
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $level === 'error'
+            && $message === 'item.captured.failure'
+            && $context['event']['outcome'] === 'failure'
+            && $context['reason'] === 'HY000'
+            // the captured text must never reach a log line
+            && ! str_contains(json_encode($context), '4711');
+    });
 });

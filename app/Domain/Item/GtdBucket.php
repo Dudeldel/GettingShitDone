@@ -33,4 +33,13 @@ enum GtdBucket: string
 
     /** Discarded. */
     case Trash = 'trash';
+
+    /**
+     * Where an unspecified bucket resolves to. Lives here rather than at the HTTP edge so
+     * changing it is a domain decision, not an edit to a FormRequest.
+     */
+    public static function default(): self
+    {
+        return self::Inbox;
+    }
 }

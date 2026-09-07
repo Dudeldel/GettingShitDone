@@ -559,17 +559,17 @@ drops `items`. Fresh installs and existing databases both reach the same state w
 
 #### Automated
 
-- [x] 2.1 Item feature tests pass
-- [x] 2.2 Service unit test passes
-- [x] 2.3 Full suite passes
-- [x] 2.4 Larastan level 6 reports 0 errors
-- [x] 2.5 Pint reports no style issues
-- [x] 2.6 OpenAPI export succeeds and contains both operations
+- [x] 2.1 Item feature tests pass — 6de4e76
+- [x] 2.2 Service unit test passes — 6de4e76
+- [x] 2.3 Full suite passes — 6de4e76
+- [x] 2.4 Larastan level 6 reports 0 errors — 6de4e76
+- [x] 2.5 Pint reports no style issues — 6de4e76
+- [x] 2.6 OpenAPI export succeeds and contains both operations — 6de4e76
 
 #### Manual
 
-- [x] 2.7 Authenticated curl returns 201 with the item
-- [x] 2.8 Unauthenticated curl returns 401
+- [x] 2.7 Authenticated curl returns 201 with the item — 6de4e76
+- [x] 2.8 Unauthenticated curl returns 401 — 6de4e76
 
 ### Phase 3: Capture UI and Inbox list
 

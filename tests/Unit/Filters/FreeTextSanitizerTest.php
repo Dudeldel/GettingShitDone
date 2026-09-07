@@ -14,14 +14,6 @@ it('leaves clean text untouched', function () {
     expect(FreeTextSanitizer::sanitize('buy milk'))->toBe('buy milk');
 });
 
-it('passes null through', function () {
-    expect(FreeTextSanitizer::sanitizeNullable(null))->toBeNull();
-});
-
-it('sanitizes a non-null nullable value', function () {
-    expect(FreeTextSanitizer::sanitizeNullable("note\x01"))->toBe('note');
-});
-
 it('keeps the entry intact when the input is not valid UTF-8', function () {
     // With a /u-modified pattern preg_replace returns null here and a (string) cast would
     // silently yield '' — losing the whole capture, which the PRD guardrail forbids.

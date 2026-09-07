@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Dto\Payload\CaptureItemPayload;
+use App\Exceptions\ItemPersistenceException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CaptureItemRequest;
 use App\Http\Requests\ListItemsRequest;
@@ -16,6 +17,8 @@ class ItemController extends Controller
 
     /**
      * Capture a free-text idea into the Inbox.
+     *
+     * @throws ItemPersistenceException
      */
     public function store(CaptureItemRequest $request): JsonResponse
     {

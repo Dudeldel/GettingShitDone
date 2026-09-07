@@ -14,7 +14,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
 
 // Authenticated endpoints. LogContextMiddleware runs after auth so user_id is resolved.
-Route::middleware(['auth:sanctum', LogContextMiddleware::class])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api', LogContextMiddleware::class])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 

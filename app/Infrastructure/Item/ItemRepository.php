@@ -6,18 +6,27 @@ use App\Domain\Item\GtdBucket;
 use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Exceptions\ItemPersistenceException;
 use App\Models\Item;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 
 class ItemRepository implements ItemRepositoryInterface
 {
     public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
     {
-        $item = Item::query()->create([
-            'title' => $payload->title,
-            'note' => $payload->note,
-            'bucket' => $bucket,
-        ]);
+        try {
+            $item = Item::query()->create([
+                'title' => $payload->title,
+                'note' => $payload->note,
+                'bucket' => $bucket,
+            ]);
+        } catch (QueryException $e) {
+            // Never rethrow the driver message and never chain it as `previous`: Laravel
+            // interpolates the bindings into it, which would put the captured text into
+            // the error log past the key-based redaction processor.
+            throw new ItemPersistenceException((string) $e->getCode());
+        }
 
         return $this->toDto($item);
     }

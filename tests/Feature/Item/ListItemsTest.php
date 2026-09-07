@@ -1,16 +1,9 @@
 <?php
 
 use App\Domain\Item\GtdBucket;
-use App\Domain\Item\ItemRepositoryInterface;
-use App\Dto\Payload\CaptureItemPayload;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
-
-function seedItem(string $title, GtdBucket $bucket): void
-{
-    app(ItemRepositoryInterface::class)->create(new CaptureItemPayload($title, null), $bucket);
-}
 
 it('lists only the Inbox by default', function () {
     Sanctum::actingAs(User::factory()->create());
