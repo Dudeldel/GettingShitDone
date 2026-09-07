@@ -112,7 +112,7 @@ export function logout(): Promise<void> {
   return request<void>('/api/logout', { method: 'POST' })
 }
 
-// --- Health check (preserved from the walking skeleton; App.tsx depends on these) ---
+// --- Health check (preserved from the walking skeleton; no longer rendered in the UI) ---
 
 export interface HealthStatus {
   status: string
@@ -123,4 +123,35 @@ export interface HealthStatus {
 
 export function fetchHealth(): Promise<HealthStatus> {
   return request<HealthStatus>('/api/health')
+}
+
+// --- GTD items ---
+
+export interface Item {
+  id: number
+  title: string
+  note: string | null
+  bucket: string
+  // Dormant until S-06 (dates) and S-07 (metadata): the API always returns null today,
+  // so the shape stays stable when those slices start filling them.
+  dueDate: string | null
+  tags: string[] | null
+  context: string | null
+  important: boolean | null
+  urgent: boolean | null
+  createdAt: string
+  updatedAt: string
+}
+
+export function captureItem(title: string, note?: string): Promise<Item> {
+  return request<Item>('/api/items', {
+    method: 'POST',
+    body: JSON.stringify(note === undefined ? { title } : { title, note }),
+  })
+}
+
+export function listItems(bucket?: string): Promise<Item[]> {
+  const query = bucket === undefined ? '' : `?bucket=${encodeURIComponent(bucket)}`
+
+  return request<Item[]>(`/api/items${query}`)
 }

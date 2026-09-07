@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { fetchHealth, type HealthStatus } from './api'
+import { listItems, type Item } from './api'
 import { useAuth } from './auth/context'
+import { CaptureForm } from './items/CaptureForm'
+import { InboxList } from './items/InboxList'
 
 function App() {
   const { user, logout } = useAuth()
-  const [health, setHealth] = useState<HealthStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [items, setItems] = useState<Item[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchHealth()
-      .then(setHealth)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+    listItems()
+      .then(setItems)
+      .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -39,22 +43,16 @@ function App() {
         </span>
       </header>
 
-      <p>Authenticated. API health check below.</p>
+      {/* Prepend the item the POST returned rather than refetching: confirmation then
+          costs one round trip, not two (the ~2s capture NFR). */}
+      <CaptureForm onCaptured={(item) => setItems((current) => [item, ...current])} />
 
-      {error !== null && <p style={{ color: 'crimson' }}>API unreachable: {error}</p>}
-      {error === null && health === null && <p>Checking API…</p>}
-      {health !== null && (
-        <dl>
-          <dt>Status</dt>
-          <dd>{health.status}</dd>
-          <dt>App</dt>
-          <dd>{health.app}</dd>
-          <dt>Environment</dt>
-          <dd>{health.environment}</dd>
-          <dt>Server time</dt>
-          <dd>{health.time}</dd>
-        </dl>
+      <h2>Inbox</h2>
+      {loadError !== null && (
+        <p style={{ color: 'crimson' }}>Could not load your Inbox: {loadError}</p>
       )}
+      {loadError === null && loading && <p>Loading…</p>}
+      {loadError === null && !loading && <InboxList items={items} />}
     </main>
   )
 }
