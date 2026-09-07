@@ -29,3 +29,6 @@ Thumbs.db
 
 # Scramble OpenAPI export (generated on the fly; docs serve live at /docs/api)
 /api.json
+
+# Claude Code local overrides
+.claude/settings.local.json
