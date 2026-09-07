@@ -2,6 +2,7 @@
 
 namespace App\Logging;
 
+use App\Domain\Item\GtdBucket;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -16,6 +17,20 @@ use Illuminate\Support\Facades\Log;
  */
 class LogEvent
 {
+    /**
+     * An idea was captured into a GTD bucket (FR-001).
+     *
+     * @param  int  $itemId  id of the freshly created item
+     * @param  GtdBucket  $bucket  where it landed — always the Inbox on capture today
+     */
+    public static function itemCaptured(int $itemId, GtdBucket $bucket): void
+    {
+        self::emit('item.captured.success', 'database', 'success', [
+            'item_id' => $itemId,
+            'bucket' => $bucket->value,
+        ]);
+    }
+
     /**
      * Build and emit a structured domain event. Protected on purpose: callers use the
      * named methods added to this class, not a free-form emitter.

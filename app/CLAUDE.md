@@ -343,7 +343,9 @@ public function project(): BelongsTo { /* … */ }
  */
 class Item extends Model { /* … */ }
 
-/** @return JsonResponse<ItemDto> */   // also drives Scramble
+// Do NOT write @return JsonResponse<ItemDto> — JsonResponse is not generic and
+// Larastan level 6 fails with generics.notGeneric. Scramble reads the response
+// schema off the DTO the method actually returns.
 public function show(string $id): JsonResponse { /* … */ }
 ```
 
@@ -353,13 +355,13 @@ Run: `./vendor/bin/phpstan analyse --memory-limit=512M`.
 
 `dedoc/scramble` auto-generates OpenAPI 3.1 from code — request body from FormRequest `rules()`, response from DTOs implementing `Arrayable`, params from routes, errors from `auth:sanctum` + `@throws`, backed enums. Export `php artisan scramble:export`; Bearer (Sanctum) security scheme; config in `config/scramble.php` + `AppServiceProvider::boot()`. Annotations to add (the tool mechanics the agent already knows; these are the project requirements):
 
-- **Controller**: first PHPDoc line = summary; **`@return JsonResponse<Dto>`** (or `<list<Dto>>`) **required on every method**; `@throws` documents error responses; `@unauthenticated` excludes from the global Bearer scheme; `@operationId` overrides the id.
+- **Controller**: first PHPDoc line = summary. Do **not** annotate `@return JsonResponse<Dto>` — `JsonResponse` is not generic, so Larastan level 6 rejects it (`generics.notGeneric`); Scramble infers the response schema from the returned DTO instead. `@throws` documents error responses; `@unauthenticated` excludes from the global Bearer scheme; `@operationId` overrides the id.
 - **FormRequest**: a comment above a field = its description; `@query` moves a field to the query string; `@var <shape>` overrides the inferred type; `@example`; `@ignoreParam` hides a field; `@requestMediaType multipart/form-data` for uploads.
 - **DTO**: typed `@return array{...}` on `jsonSerialize()` (drives the response schema) + per-field `@example` / `@default` / `@format`.
 - **Attributes** (alt to PHPDoc): `#[QueryParameter]`, `#[PathParameter]`, `#[Group('Tag', weight: N)]`. Group several controllers under one tag via `Scramble::configure()->afterOpenApiGenerated(...)` (set the tag per operation, then push `new Tag('Name', 'desc')` to `$openApi->tags`).
 - **Backed enums**: a PHPDoc comment on each case becomes its schema description.
 
-**Per-endpoint checklist:** controller summary PHPDoc · `@return JsonResponse<Dto>` · DTO implements `Arrayable` (+ `@implements Arrayable<string, mixed>`) with typed `@return array{...}` on `jsonSerialize()` · FormRequest has `rules()` · enums have PHPDoc on cases.
+**Per-endpoint checklist:** controller summary PHPDoc (no `@return` generic) · DTO implements `Arrayable` (+ `@implements Arrayable<string, mixed>`) with typed `@return array{...}` on `jsonSerialize()` · FormRequest has `rules()` · enums have PHPDoc on cases.
 
 Pint is already present (Laravel preset, no `pint.json`).
 

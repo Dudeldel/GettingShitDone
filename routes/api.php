@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Middleware\LogContextMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -16,4 +17,8 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 Route::middleware(['auth:sanctum', LogContextMiddleware::class])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // GTD items. Capture always targets the Inbox; the list is filtered by ?bucket=.
+    Route::post('/items', [ItemController::class, 'store']);
+    Route::get('/items', [ItemController::class, 'index']);
 });
