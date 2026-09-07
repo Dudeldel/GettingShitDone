@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Domain\Auth\UserRepositoryInterface;
+use App\Domain\Item\ItemRepositoryInterface;
 use App\Infrastructure\Auth\UserRepository;
+use App\Infrastructure\Item\ItemRepository;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+        $this->app->bind(ItemRepositoryInterface::class, ItemRepository::class);
     }
 
     /**
