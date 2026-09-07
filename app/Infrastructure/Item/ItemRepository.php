@@ -40,10 +40,15 @@ class ItemRepository implements ItemRepositoryInterface
             title: $item->title,
             note: $item->note,
             bucket: $item->bucket,
-            createdAt: $item->created_at->toIso8601String(),
-            updatedAt: $item->updated_at->toIso8601String(),
+            // Nullable at the schema level ($table->timestamps()), so a row written
+            // outside Eloquent can carry nulls. Empty reads as visibly absent; an
+            // invented timestamp would look real.
+            createdAt: $item->created_at?->toIso8601String() ?? '',
+            updatedAt: $item->updated_at?->toIso8601String() ?? '',
             dueDate: $item->due_date?->toDateString(),
-            tags: $item->tags,
+            // array_values keeps the DTO's list<string> promise honest: the json cast
+            // returns whatever json_decode produced, which need not be a packed list.
+            tags: $item->tags === null ? null : array_values($item->tags),
             context: $item->context,
             important: $item->important,
             urgent: $item->urgent,

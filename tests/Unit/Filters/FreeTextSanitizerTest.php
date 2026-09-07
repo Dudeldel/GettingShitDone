@@ -21,3 +21,11 @@ it('passes null through', function () {
 it('sanitizes a non-null nullable value', function () {
     expect(FreeTextSanitizer::sanitizeNullable("note\x01"))->toBe('note');
 });
+
+it('keeps the entry intact when the input is not valid UTF-8', function () {
+    // With a /u-modified pattern preg_replace returns null here and a (string) cast would
+    // silently yield '' — losing the whole capture, which the PRD guardrail forbids.
+    $malformed = "cafe\xE9 idea";
+
+    expect(FreeTextSanitizer::sanitize($malformed."\x00"))->toBe($malformed);
+});

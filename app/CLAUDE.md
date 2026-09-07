@@ -95,7 +95,7 @@ Five short files; the Service is nearly empty — the sign there's no business l
 - Repository returns DTO / `Collection<DTO>`, never Models.
 - Transaction wraps the **Service**, not the Repository. (Repo may expose a `transaction(callable)` helper; the Service wraps the batch in it.)
 - Transaction status: `markPending → try { … markCompleted } catch { markFailed; throw }`.
-- DTO-from-request: `Dto::fromArray($request->validated())` — snake_case in (from validation), camelCase out (to API).
+- DTO-from-request: `Dto::fromArray($request->validated())` — **camelCase in and camelCase out** (see "DTO — always `fromArray()`" below); never snake_case.
 - `Response::HTTP_*` constants always. `201` → `Response::HTTP_CREATED`, `202` → `Response::HTTP_ACCEPTED`.
 
 ---
@@ -183,7 +183,11 @@ final class FreeTextSanitizer
 {
     public static function sanitize(string $value): string
     {
-        return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value); // keep LF, TAB
+        // No /u: the class is pure ASCII, and with /u an invalid-UTF-8 subject makes
+        // preg_replace return null — a (string) cast would silently blank the value.
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value); // keep LF, TAB
+
+        return $sanitized ?? $value;
     }
     public static function sanitizeNullable(?string $value): ?string
     {

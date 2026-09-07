@@ -18,7 +18,7 @@ use JsonSerializable;
 class ItemDto implements Arrayable, JsonSerializable
 {
     /**
-     * @param  array<int, string>|null  $tags
+     * @param  list<string>|null  $tags
      */
     public function __construct(
         public readonly int $id,
@@ -39,7 +39,7 @@ class ItemDto implements Arrayable, JsonSerializable
      */
     public static function fromArray(array $item): self
     {
-        /** @var array<int, string>|null $tags */
+        /** @var list<string>|null $tags */
         $tags = $item['tags'] ?? null;
 
         return new self(
@@ -58,7 +58,7 @@ class ItemDto implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: array<int, string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
      */
     public function toArray(): array
     {
@@ -78,7 +78,7 @@ class ItemDto implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: array<int, string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
      */
     public function jsonSerialize(): array
     {

@@ -15,7 +15,13 @@ final class FreeTextSanitizer
      */
     public static function sanitize(string $value): string
     {
-        return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+        // No /u modifier: the class is pure ASCII, and with /u a subject that is not
+        // valid UTF-8 makes preg_replace return null — which a (string) cast would
+        // silently turn into '', destroying the whole entry. On any PCRE failure keep
+        // the original: the guardrail is that capture never loses an entry.
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+
+        return $sanitized ?? $value;
     }
 
     public static function sanitizeNullable(?string $value): ?string

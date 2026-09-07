@@ -22,8 +22,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $context
  * @property bool|null $important
  * @property bool|null $urgent
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 #[Fillable(['title', 'note', 'bucket'])]
 class Item extends Model

@@ -9,7 +9,10 @@ The scaffold currently ships PHPUnit `ExampleTest`s (`tests/Feature/ExampleTest.
 Split tests:
 
 - **Unit** (`tests/Unit/`) — isolated classes: DTOs, services, strategies, Value Objects. No HTTP, no DB where avoidable.
-- **Feature** (`tests/Feature/`) — endpoints end-to-end, against SQLite in-memory.
+- **Feature** (`tests/Feature/`) — anything needing the booted app **and** a database,
+  against SQLite in-memory: endpoints end-to-end, and repository/integration tests that
+  exercise real persistence. `tests/Pest.php` applies `RefreshDatabase` to this suite only,
+  which is what makes it the home for both.
 
 ## Conventions
 

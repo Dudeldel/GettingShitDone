@@ -1,7 +1,7 @@
 ---
 change_id: capture-to-inbox
 title: Capture an idea into the Inbox (north star)
-status: implementing
+status: impl_reviewed
 created: 2026-06-25
 updated: 2026-09-07
 archived_at: null

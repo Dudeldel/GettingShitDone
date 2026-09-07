@@ -62,3 +62,14 @@ it('lists the newest item first', function () {
 it('returns an empty collection for a bucket with no items', function () {
     expect($this->items->listByBucket(GtdBucket::Projects))->toBeEmpty();
 });
+
+it('sorts by created_at before falling back to the id tiebreaker', function () {
+    $this->items->create(new CaptureItemPayload('backdated', null), GtdBucket::Inbox);
+    $newer = $this->items->create(new CaptureItemPayload('recent', null), GtdBucket::Inbox);
+
+    // The NEWER id gets the OLDER timestamp, so id desc alone would order these wrongly.
+    Item::query()->whereKey($newer->id)->update(['created_at' => now()->subDay()]);
+
+    expect($this->items->listByBucket(GtdBucket::Inbox)->pluck('title')->all())
+        ->toBe(['backdated', 'recent']);
+});

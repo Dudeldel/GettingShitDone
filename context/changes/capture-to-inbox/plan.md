@@ -184,7 +184,8 @@ through S-06/S-07.
 **Contract**: implements `Arrayable` + `JsonSerializable` with
 `@implements Arrayable<string, mixed>`; `fromArray()` takes camelCase, `toArray()` returns
 camelCase. Field set and the typed `@return array{...}` on `jsonSerialize()`:
-`id: int`, `title: string`, `note: string|null`, `bucket: string`,
+`id: int`, `title: string`, `note: string|null`, `bucket: string` (the constructor
+property is the `GtdBucket` enum; only the serialized shape is a string),
 `dueDate: string|null`, `tags: list<string>|null`, `context: string|null`,
 `important: bool|null`, `urgent: bool|null`, `createdAt: string`, `updatedAt: string`
 (timestamps as ISO-8601, matching `HealthController`'s `toIso8601String()`).
@@ -453,7 +454,8 @@ load-bearing names must be registered or S-02's plan will not be able to referen
 **Contract**: new H2 sections — `Item endpoints` (the two routes, auth group, status
 codes, the `bucket` query filter), `GtdBucket` (the eight case values and the
 string-column-plus-cast decision), `ItemRepositoryInterface` (the two methods, DTO-only
-return, ordering guarantee), `LogEvent::itemCaptured` (action name and context keys), and
+return, ordering guarantee, and the deliberate absence of pagination — deferred per PRD
+Open Question #2 "list-view responsiveness target"), `LogEvent::itemCaptured` (action name and context keys), and
 `ItemDto` (the field set, including the dormant read-only fields and which slice fills
 each).
 
@@ -541,15 +543,15 @@ drops `items`. Fresh installs and existing databases both reach the same state w
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly on a fresh database
-- [x] 1.2 Unit tests pass
-- [x] 1.3 Repository test passes
-- [x] 1.4 Larastan level 6 reports 0 errors
-- [x] 1.5 Pint reports no style issues
+- [x] 1.1 Migration applies cleanly on a fresh database — 37ba633
+- [x] 1.2 Unit tests pass — 37ba633
+- [x] 1.3 Repository test passes — 37ba633
+- [x] 1.4 Larastan level 6 reports 0 errors — 37ba633
+- [x] 1.5 Pint reports no style issues — 37ba633
 
 #### Manual
 
-- [x] 1.6 Schema inspection confirms indexed `bucket` and nullable S-06/S-07 columns
+- [x] 1.6 Schema inspection confirms indexed `bucket` and nullable S-06/S-07 columns — 37ba633
 
 ### Phase 2: Capture and list API
 
