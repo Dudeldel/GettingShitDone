@@ -3,7 +3,7 @@ project: "Getting Shit Done"
 version: 1
 status: draft
 created: 2026-06-24
-updated: 2026-09-07
+updated: 2026-09-08
 prd_version: 1
 main_goal: quality
 top_blocker: skills
@@ -32,7 +32,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | F-01 | quality-gates-toolchain    | (foundation) CI runs Pest + Larastan L6 + Scramble on every push | —             | tests/CLAUDE.md gate, NFR         | done     |
 | F-02 | email-password-auth        | (foundation) the one user signs in; API requests are authenticated | F-01        | Access Control, US-01             | done     |
 | F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | done (absorbed by F-01+F-02) |
-| S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | in-progress |
+| S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | done |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | proposed |
 | S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | proposed |
 | S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | proposed |
@@ -147,7 +147,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Does the capture write path interact badly with Octane/Swoole persistent state (no request state in singletons per `infrastructure.md`)? Owner: user. Block: no.
 - **Risk:** This is the north star, so it carries first-feature risk: it introduces the item domain spine (the `items` table, the `GtdBucket` enum defaulting to Inbox, the Item model + repository + DTO). Kept minimal — capture + Inbox list only — so the spine is introduced vertically, not as a horizontal "build the schema" step.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-02: Guided clarify routes an item to its bucket
 
@@ -286,3 +286,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **F-01: (foundation) CI runs Pest + Larastan L6 + Scramble on every push** — Archived 2026-06-24 → `context/archive/2026-06-24-quality-gates-toolchain/`. Lesson: —.
 - **F-02: (foundation) the one user signs in; API requests are authenticated** — Archived 2026-06-25 → `context/archive/2026-06-24-email-password-auth/`. Lesson: —.
+- **S-01: sign in, type an idea, and see it saved in the Inbox in ~2s** — Archived 2026-09-08 → `context/archive/2026-06-25-capture-to-inbox/`. Lesson: —.
