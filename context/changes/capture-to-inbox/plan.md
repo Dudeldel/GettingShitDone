@@ -589,9 +589,9 @@ drops `items`. Fresh installs and existing databases both reach the same state w
 
 #### Automated
 
-- [ ] 4.1 All backend gates pass
-- [ ] 4.2 Frontend gates pass
-- [ ] 4.3 OpenAPI export succeeds
+- [x] 4.1 All backend gates pass
+- [x] 4.2 Frontend gates pass
+- [x] 4.3 OpenAPI export succeeds
 
 #### Manual
 
