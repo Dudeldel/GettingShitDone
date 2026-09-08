@@ -589,12 +589,12 @@ drops `items`. Fresh installs and existing databases both reach the same state w
 
 #### Automated
 
-- [x] 4.1 All backend gates pass
-- [x] 4.2 Frontend gates pass
-- [x] 4.3 OpenAPI export succeeds
+- [x] 4.1 All backend gates pass — ed76c41
+- [x] 4.2 Frontend gates pass — ed76c41
+- [x] 4.3 OpenAPI export succeeds — ed76c41
 
 #### Manual
 
-- [ ] 4.4 Fresh-database walkthrough completes
-- [ ] 4.5 Contract surfaces match the shipped names
-- [ ] 4.6 OpenAPI shows both item operations under the Bearer scheme
+- [x] 4.4 Fresh-database walkthrough completes — ed76c41
+- [x] 4.5 Contract surfaces match the shipped names — ed76c41
+- [x] 4.6 OpenAPI shows both item operations under the Bearer scheme — ed76c41
