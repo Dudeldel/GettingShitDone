@@ -5,12 +5,52 @@ namespace App\Exceptions;
 use RuntimeException;
 
 /**
- * The submitted answers do not describe a complete path through the decision tree —
- * e.g. non-actionable with no destination chosen, or delegable with no "who".
+ * The submitted answers do not describe a complete path through the decision tree.
  *
  * Thrown by the domain rather than defaulted away: silently picking a bucket for an
  * ill-formed answer set is precisely the "item lands somewhere arbitrary" failure FR-008
- * exists to prevent. Mapped to HTTP 422; the HTTP edge rejects most of these first, so
- * reaching this exception means the edge and the domain disagree.
+ * exists to prevent. Mapped to HTTP 422.
+ *
+ * The constructor is private and every message is a hardcoded string behind a named
+ * factory. That is what makes it safe for bootstrap/app.php to render getMessage() to the
+ * client: this exception cannot be constructed with interpolated request data, so the
+ * privacy rule that shaped ItemPersistenceException holds here by construction rather than
+ * by everyone remembering it.
  */
-class InvalidClarificationException extends RuntimeException {}
+class InvalidClarificationException extends RuntimeException
+{
+    private function __construct(string $message)
+    {
+        parent::__construct($message);
+    }
+
+    public static function missingActionableAnswer(): self
+    {
+        return new self('Clarify needs an answer to "is it actionable?".');
+    }
+
+    public static function missingSingleStepAnswer(): self
+    {
+        return new self('Clarify needs an answer to "is it a single step?".');
+    }
+
+    public static function missingDelegableAnswer(): self
+    {
+        return new self('Clarify needs an answer to "can it be delegated?".');
+    }
+
+    public static function missingNonActionableDestination(): self
+    {
+        return new self('A non-actionable item must go to Trash, Someday/Maybe or Reference.');
+    }
+
+    public static function missingDelegationNote(): self
+    {
+        return new self('Delegating an item needs a note saying who you are waiting on.');
+    }
+
+    public static function quickRouteToInbox(): self
+    {
+        return new self('A quick-route needs a destination other than the Inbox.');
+    }
+}

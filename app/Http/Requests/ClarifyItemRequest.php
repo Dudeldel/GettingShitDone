@@ -76,6 +76,11 @@ class ClarifyItemRequest extends FormRequest
              */
             'delegatedTo' => [
                 'required_if_accepted:delegable',
+                // Delegation is a legal quick-route target, and the note is what makes the
+                // bucket meaningful — so the edge must demand it there too. Without this the
+                // domain rejects the payload instead, which is the edge/domain disagreement
+                // InvalidClarificationException says should never happen.
+                'required_if:quickRouteBucket,'.GtdBucket::Delegation->value,
                 'nullable',
                 'string',
                 'max:'.ItemConst::DELEGATED_TO_MAX_LENGTH,

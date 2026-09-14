@@ -35,8 +35,8 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | done |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | in-progress |
 | S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | proposed |
-| S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | proposed |
-| S-05 | eight-bucket-views         | open and view the items in each of the 8 GTD buckets             | S-01          | FR-009                            | proposed |
+| S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | absorbed by S-02 |
+| S-05 | eight-bucket-views         | open and view all 8 GTD buckets, and empty the Trash             | S-01          | FR-009 (+ Trash purge, no FR)     | proposed |
 | S-06 | dates-and-calendar-bucket  | assign a date to an item and see it in the Calendar/Dates bucket | S-01, S-05    | FR-011                            | proposed |
 | S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | proposed |
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
@@ -184,18 +184,24 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Deliberately thin: in the MVP a Project is just a destination bucket (FR-005 resolution). Linking next actions to projects (FR-012) is Parked, so this slice must not grow project hierarchy — that scope creep is the main risk.
-- **Status:** proposed
+- **Status:** absorbed by S-02 — the multi-step branch of the clarify tree routes to the
+  Projects bucket (`ClarifyDecision`), covered by unit and feature tests. FR-005's own
+  resolution says a Project in the MVP *is* just a destination bucket, and `GtdBucket::Projects`
+  already existed, so there was nothing left for a separate slice to build. Project hierarchy
+  (FR-012) stays parked.
 
 ### S-05: View all 8 buckets
 
-- **Outcome:** user can open and view the items in each of the 8 GTD buckets (Inbox, Next Actions, Projects, Calendar/Dates, Delegation, Someday/Maybe, Reference, Trash).
+- **Outcome:** user can open and view the items in each of the 8 GTD buckets (Inbox, Next Actions, Projects, Calendar/Dates, Delegation, Someday/Maybe, Reference, Trash), and permanently discard what sits in the Trash ("empty the Trash").
 - **Change ID:** eight-bucket-views
-- **PRD refs:** FR-009
+- **PRD refs:** FR-009; the Trash purge carries no FR of its own — it completes the Trash destination FR-004 already offers (see Note)
 - **Prerequisites:** S-01
 - **Parallel with:** S-02, S-07
 - **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Generalizes the Inbox list from S-01 into navigation across all 8 buckets. Read-only views over the item spine — low risk; the full 8-bucket set IS the "GTD out-of-the-box" promise, so none can be dropped for UI economy.
+- **Unknowns:**
+  - Purge granularity: "empty the whole Trash" in one action vs. discarding one item at a time from the Trash view (or both). Owner: user. Block: no — decide in `/10x-plan`.
+- **Risk:** Generalizes the Inbox list from S-01 into navigation across all 8 buckets, and adds the slice's one destructive write. The views themselves stay low risk; the purge does not — it is the only irreversible operation in the product, so it must be reachable ONLY from the Trash view and never as a generic "delete item" verb hanging off every bucket. That boundary is what keeps it inside FR-004's semantics instead of quietly shipping FR-010's re-filing, which is parked. The full 8-bucket set IS the "GTD out-of-the-box" promise, so none can be dropped for UI economy.
+- **Note (added 2026-09-14):** the Trash purge was folded in here on purpose rather than getting its own slice. In GTD the Trash IS the delete (FR-004), so routing an item there is a clarify outcome, not a removal — as of S-02 nothing in the product ever removes a row. The Trash view is the only place a permanent discard belongs, so it rides along with the view that introduces it. Secondary, and not the reason it was added: it also closes the missing Delete operation in the 10xBuilder CRUD check.
 - **Status:** proposed
 
 ### S-06: Assign dates; Calendar/Dates bucket
@@ -257,7 +263,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-02       | guided-clarify-routing    | Guided clarify routes an item to its bucket          | no                    | Needs S-01, F-03                       |
 | S-03       | two-minute-rule-timer     | 2-minute rule timer in clarify                        | no                    | Needs S-02                             |
 | S-04       | promote-to-project        | Promote a multi-step item to a Project               | no                    | Needs S-02                             |
-| S-05       | eight-bucket-views        | View all 8 GTD buckets                                | no                    | Needs S-01                             |
+| S-05       | eight-bucket-views        | View all 8 GTD buckets; empty the Trash               | no                    | Needs S-01                             |
 | S-06       | dates-and-calendar-bucket | Assign dates; Calendar/Dates bucket                   | no                    | Needs S-01, S-05                       |
 | S-07       | item-metadata             | Tags, contexts, priorities, and flags                 | no                    | Needs S-01                             |
 | S-08       | eisenhower-quadrants      | Eisenhower quadrants for Next Actions                 | no                    | Needs S-02, S-07                       |

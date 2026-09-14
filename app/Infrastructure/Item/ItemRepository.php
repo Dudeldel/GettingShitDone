@@ -36,31 +36,45 @@ class ItemRepository implements ItemRepositoryInterface
 
     public function clarify(int $itemId, ClarifyOutcome $outcome): ItemDto
     {
-        $item = Item::query()->find($itemId);
-
-        if ($item === null) {
-            throw new ItemNotFoundException('No item with id '.$itemId.'.');
-        }
-
-        // Inbox-only, by design: re-filing an already-bucketed item is FR-010, deferred to
-        // v2. Checked before the write so a second clarify cannot quietly overwrite the
-        // destination the user already chose.
-        if ($item->bucket !== GtdBucket::Inbox) {
-            throw new ItemNotInInboxException('Item '.$itemId.' has already been clarified.');
-        }
-
         try {
-            // Explicit assignment rather than mass assignment: bucket is fillable, and the
-            // delegation columns deliberately are not, so an array arriving from anywhere
-            // near a request can never reach them.
-            $item->bucket = $outcome->bucket;
-            $item->delegated_to = $outcome->delegatedTo;
-            $item->delegation_done = $outcome->delegatedTo === null ? null : false;
-            $item->save();
+            // Guard and write in ONE statement. A find/compare/save sequence is check-then-act:
+            // two concurrent clarifies both read `inbox`, both pass the check, and both write —
+            // returning 200 with contradictory destinations and leaving the row corrupt, because
+            // save() only writes dirty attributes so one request's null delegated_to never lands.
+            // The `where bucket = inbox` predicate makes the database the arbiter instead.
+            // Same defect class as the archived email-password-auth F1 (check-then-act on the
+            // first-run gate), fixed there with a transaction; a conditional update closes this
+            // one without needing a transaction seam at all.
+            $affected = Item::query()
+                ->where('id', $itemId)
+                ->where('bucket', GtdBucket::Inbox->value)
+                ->update([
+                    'bucket' => $outcome->bucket->value,
+                    'delegated_to' => $outcome->delegatedTo,
+                    'delegation_done' => $outcome->delegatedTo === null ? null : false,
+                    // Query-builder updates bypass Eloquent, so timestamps are ours to set.
+                    'updated_at' => now(),
+                ]);
         } catch (QueryException $e) {
             // Same reasoning as create(): Laravel interpolates bindings into the message,
             // so the driver exception must not travel.
             throw new ItemPersistenceException((string) $e->getCode());
+        }
+
+        if ($affected === 0) {
+            // Nothing matched. One read tells the two cases apart, and it is only reached on
+            // the failure path, so the happy path stays a single statement.
+            throw Item::query()->whereKey($itemId)->exists()
+                ? new ItemNotInInboxException('Item '.$itemId.' has already been clarified.')
+                : new ItemNotFoundException('No item with id '.$itemId.'.');
+        }
+
+        $item = Item::query()->find($itemId);
+
+        if ($item === null) {
+            // Deleted between the update and the read. Nothing to return, and the caller must
+            // not be handed a DTO for a row that no longer exists.
+            throw new ItemNotFoundException('No item with id '.$itemId.'.');
         }
 
         return $this->toDto($item);

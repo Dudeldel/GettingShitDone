@@ -3,6 +3,7 @@
 use App\Domain\Clarify\ClarifyDecision;
 use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Dto\Payload\ClarifyItemPayload;
 use App\Exceptions\ItemPersistenceException;
 use App\Services\ItemService;
 use Illuminate\Support\Facades\Log;
@@ -57,5 +58,34 @@ it('emits a failure event and rethrows when the write fails', function () {
             && $context['reason'] === 'HY000'
             // the captured text must never reach a log line
             && ! str_contains(json_encode($context), '4711');
+    });
+});
+
+it('derives the destination from the answers and hands it to the repository', function () {
+    $repo = fakeItemRepository();
+
+    $dto = (new ItemService($repo, new ClarifyDecision))->clarify(
+        7,
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, delegable: false),
+    );
+
+    // The service must not accept a destination — it asks the domain for one.
+    expect($repo->clarifiedItemId)->toBe(7)
+        ->and($repo->clarifiedTo->bucket)->toBe(GtdBucket::NextActions)
+        ->and($dto->bucket)->toBe(GtdBucket::NextActions);
+});
+
+it('emits a failure event and rethrows when the clarify write fails', function () {
+    Log::spy();
+
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true), new ClarifyDecision))
+        ->clarify(7, ClarifyItemPayload::quickRoute(GtdBucket::Trash)))
+        ->toThrow(ItemPersistenceException::class);
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $level === 'error'
+            && $message === 'item.clarified.failure'
+            && $context['bucket'] === 'trash'
+            && $context['reason'] === 'HY000';
     });
 });

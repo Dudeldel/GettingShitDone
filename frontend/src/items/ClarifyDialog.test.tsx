@@ -186,3 +186,59 @@ describe('when clarify cannot complete', () => {
     expect(alert).not.toHaveTextContent(/failed to fetch/i)
   })
 })
+
+describe('the quick-route (FR-002)', () => {
+  it('files the item directly, skipping the questions', async () => {
+    const sent = captureClarifyRequest('reference')
+    const { user, clarified } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: /skip the questions/i }))
+    await user.click(screen.getByRole('button', { name: 'Reference' }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({ quickRouteBucket: 'reference' })
+  })
+
+  it('still asks who you are waiting on when the target is Delegation', async () => {
+    // The quick-route skips the questions, not the field that makes Delegation meaningful.
+    const sent = captureClarifyRequest('delegation')
+    const { user, clarified } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: /skip the questions/i }))
+    await user.click(screen.getByRole('button', { name: 'Delegation' }))
+    await user.type(screen.getByLabelText(/who are you waiting on/i), 'Piotr — the quote')
+    await user.click(screen.getByRole('button', { name: /delegate/i }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({ quickRouteBucket: 'delegation', delegatedTo: 'Piotr — the quote' })
+  })
+
+  it('does not offer the Inbox as a destination', async () => {
+    const { user } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: /skip the questions/i }))
+
+    // Routing to the Inbox is not a clarification; it is the absence of one.
+    expect(screen.queryByRole('button', { name: /^inbox$/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('the wizard as a dialog', () => {
+  it('announces itself and takes focus', async () => {
+    renderDialog()
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    // Focus must enter the wizard, or a keyboard user is left on the trigger with no
+    // signal that anything opened.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveFocus())
+  })
+
+  it('closes on Escape', async () => {
+    const { user, cancelled } = renderDialog()
+
+    await user.keyboard('{Escape}')
+
+    expect(cancelled.count).toBe(1)
+  })
+})

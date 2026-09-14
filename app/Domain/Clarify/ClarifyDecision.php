@@ -52,7 +52,7 @@ class ClarifyDecision
         }
 
         if ($payload->actionable === null) {
-            throw new InvalidClarificationException('Clarify needs an answer to "is it actionable?".');
+            throw InvalidClarificationException::missingActionableAnswer();
         }
 
         return $payload->actionable
@@ -67,7 +67,7 @@ class ClarifyDecision
 
         if ($bucket === null || $bucket === GtdBucket::Inbox) {
             // Routing to the Inbox is not a clarification; it is the absence of one.
-            throw new InvalidClarificationException('A quick-route needs a destination other than the Inbox.');
+            throw InvalidClarificationException::quickRouteToInbox();
         }
 
         if ($bucket === GtdBucket::Delegation) {
@@ -83,9 +83,7 @@ class ClarifyDecision
         $destination = $payload->nonActionableDestination;
 
         if ($destination === null || ! in_array($destination, self::NON_ACTIONABLE_DESTINATIONS, true)) {
-            throw new InvalidClarificationException(
-                'A non-actionable item must go to Trash, Someday/Maybe or Reference.'
-            );
+            throw InvalidClarificationException::missingNonActionableDestination();
         }
 
         return ClarifyOutcome::to($destination);
@@ -94,7 +92,7 @@ class ClarifyDecision
     private function actionable(ClarifyItemPayload $payload): ClarifyOutcome
     {
         if ($payload->singleStep === null) {
-            throw new InvalidClarificationException('Clarify needs an answer to "is it a single step?".');
+            throw InvalidClarificationException::missingSingleStepAnswer();
         }
 
         // FR-005: a multi-step outcome is a Project. In the MVP a Project is just a
@@ -104,7 +102,7 @@ class ClarifyDecision
         }
 
         if ($payload->delegable === null) {
-            throw new InvalidClarificationException('Clarify needs an answer to "can it be delegated?".');
+            throw InvalidClarificationException::missingDelegableAnswer();
         }
 
         return $payload->delegable
@@ -118,7 +116,7 @@ class ClarifyDecision
         $who = $payload->delegatedTo;
 
         if ($who === null || trim($who) === '') {
-            throw new InvalidClarificationException('Delegating an item needs a note saying who you are waiting on.');
+            throw InvalidClarificationException::missingDelegationNote();
         }
 
         return ClarifyOutcome::delegatedTo(trim($who));

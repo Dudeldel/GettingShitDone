@@ -1,9 +1,11 @@
 <?php
 
+use App\Const\ItemConst;
 use App\Domain\Item\GtdBucket;
 use App\Models\Item;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -64,6 +66,10 @@ it('routes a delegable item to Delegation and keeps the who/what note', function
     test()->getJson('/api/items?bucket=delegation')
         ->assertStatus(Response::HTTP_OK)
         ->assertJsonPath('0.delegatedTo', 'Ania — sent the contract on Tuesday');
+
+    // The other half: an item present in its destination AND still in the Inbox would be in
+    // two buckets at once, which is exactly what FR-008 forbids.
+    test()->getJson('/api/items')->assertJsonCount(0);
 });
 
 it('routes a multi-step item to Projects', function () {
@@ -174,6 +180,109 @@ it('emits the clarify domain event with the destination and no captured text', f
             && $context['event']['outcome'] === 'success'
             && $context['item_id'] === $id
             && $context['bucket'] === 'reference'
+            && ! str_contains(json_encode($context), '4711');
+    });
+});
+
+it('sends an item straight to Delegation on the quick-route, note and all', function () {
+    // The quick-route skips the questions, not the field that makes Delegation meaningful.
+    $id = captureForClarify('chase the plumber');
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'quickRouteBucket' => 'delegation',
+        'delegatedTo' => 'Piotr — quoted on Monday',
+    ])->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('bucket', 'delegation')
+        ->assertJsonPath('delegatedTo', 'Piotr — quoted on Monday');
+
+    test()->getJson('/api/items')->assertJsonCount(0);
+});
+
+it('refuses a quick-route to Delegation with no note', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'delegation'])
+        ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['delegatedTo']);
+});
+
+it('refuses a quick-route to the Inbox, which is not a clarification', function () {
+    // This one is not a validation rule — the domain refuses it, so it also proves the
+    // InvalidClarificationException renderer is reachable over HTTP at all.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'inbox'])
+        ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+    test()->getJson('/api/items')->assertJsonCount(1);
+});
+
+it('refuses an unknown bucket with a validation error rather than a 500', function () {
+    // Rule::enum is the only thing between an unknown string and GtdBucket::from(); without
+    // it this is an uncaught ValueError and a stack trace, not a 422.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'nonsense'])
+        ->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['quickRouteBucket']);
+});
+
+it('names the field that failed, not just the status', function () {
+    // Asserting the status alone cannot tell which layer answered: the FormRequest returns
+    // {message, errors:{...}} while the domain returns {message} only. Both are 422.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'delegable' => true,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['delegatedTo']);
+
+    test()->postJson("/api/items/{$id}/clarify", ['actionable' => true])
+        ->assertJsonValidationErrors(['singleStep']);
+
+    test()->postJson("/api/items/{$id}/clarify", ['actionable' => false])
+        ->assertJsonValidationErrors(['nonActionableDestination']);
+});
+
+it('rejects a delegation note longer than the column allows', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'quickRouteBucket' => 'delegation',
+        'delegatedTo' => str_repeat('a', ItemConst::DELEGATED_TO_MAX_LENGTH + 1),
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['delegatedTo']);
+});
+
+it('strips control characters from the delegation note', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'quickRouteBucket' => 'delegation',
+        'delegatedTo' => "Ania\x00 — the contract",
+    ])->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('delegatedTo', 'Ania — the contract');
+});
+
+it('reports a failed clarify as 500 and leaves the item in the Inbox', function () {
+    // The FR-008 guardrail on the failure side: if the write fails, the user must not be told
+    // the item moved. Swallowing the QueryException here returns 200 with a DTO showing the
+    // new bucket while the row never moved.
+    $id = captureForClarify('my bank pin is 4711');
+    Log::spy();
+    Schema::drop('items');
+
+    $response = test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'trash']);
+
+    $response->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
+    expect($response->getContent())->not->toContain('4711');
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $level === 'error'
+            && $message === 'item.clarified.failure'
+            && $context['bucket'] === 'trash'
             && ! str_contains(json_encode($context), '4711');
     });
 });

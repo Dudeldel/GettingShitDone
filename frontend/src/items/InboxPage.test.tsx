@@ -174,25 +174,28 @@ describe('clarifying from the Inbox', () => {
           makeItem({ id: 2, title: 'read that article' }),
         ]),
       ),
-      http.post('*/api/items/:id/clarify', () =>
-        HttpResponse.json(makeItem({ id: 1, bucket: 'next_actions' })),
+      // Echo the id that was actually requested. A hardcoded id here made by-id and
+      // by-index remove the same element, so the test passed with `slice(1)` in place of
+      // the filter — it asserted nothing.
+      http.post('*/api/items/:id/clarify', ({ params }) =>
+        HttpResponse.json(makeItem({ id: Number(params.id), bucket: 'next_actions' })),
       ),
     )
 
     const { user } = renderPage()
     await screen.findByText('ring the dentist')
 
-    // Two items, so removal by id rather than by index is what is actually under test.
-    await user.click(screen.getAllByRole('button', { name: /clarify/i })[0])
+    // The SECOND row, so removing by index would take the wrong item.
+    await user.click(screen.getAllByRole('button', { name: /clarify/i })[1])
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: /i will do it next/i }))
 
     await waitFor(() =>
-      expect(screen.queryByText('ring the dentist')).not.toBeInTheDocument(),
+      expect(screen.queryByText('read that article')).not.toBeInTheDocument(),
     )
-    // The other item must survive.
-    expect(screen.getByText('read that article')).toBeInTheDocument()
+    // The first row must survive — by-index removal would have taken this one instead.
+    expect(screen.getByText('ring the dentist')).toBeInTheDocument()
   })
 
   it('keeps the item listed when clarify fails', async () => {

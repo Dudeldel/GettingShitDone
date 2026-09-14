@@ -1,7 +1,8 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 import {
   type ClarifyAnswers,
   clarifyItem,
+  type GtdBucket,
   type Item,
   type NonActionableDestination,
 } from '../api'
@@ -18,7 +19,24 @@ import { messageFor } from '../apiMessage'
  * The `< 2 min?` question is absent on purpose; it arrives with the timer in S-03, between
  * "single step?" and "can it be delegated?".
  */
-type Step = 'actionable' | 'nonActionable' | 'singleStep' | 'delegable' | 'delegatedTo'
+type Step =
+  | 'actionable'
+  | 'nonActionable'
+  | 'singleStep'
+  | 'delegable'
+  | 'delegatedTo'
+  | 'quickRoute'
+
+/** FR-002: skip the tree and file the item directly. Inbox is not a destination. */
+const QUICK_ROUTES: ReadonlyArray<{ value: Exclude<GtdBucket, 'inbox'>; label: string }> = [
+  { value: 'next_actions', label: 'Next Actions' },
+  { value: 'projects', label: 'Projects' },
+  { value: 'delegation', label: 'Delegation' },
+  { value: 'calendar', label: 'Calendar' },
+  { value: 'someday_maybe', label: 'Someday / Maybe' },
+  { value: 'reference', label: 'Reference' },
+  { value: 'trash', label: 'Trash' },
+]
 
 const NON_ACTIONABLE: ReadonlyArray<{ value: NonActionableDestination; label: string }> = [
   { value: 'trash', label: 'Bin it' },
@@ -37,8 +55,16 @@ export function ClarifyDialog({
 }) {
   const [step, setStep] = useState<Step>('actionable')
   const [delegatedTo, setDelegatedTo] = useState('')
+  const [quickRouteTarget, setQuickRouteTarget] = useState<GtdBucket | null>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Focus has to enter the wizard, or a keyboard user clicks Clarify and is left on the
+  // trigger with no announcement that anything opened, tabbing forward blind.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   async function send(answers: ClarifyAnswers): Promise<void> {
     setError(null)
@@ -65,12 +91,28 @@ export function ClarifyDialog({
       return
     }
 
-    void send({ actionable: true, singleStep: true, delegable: true, delegatedTo: who })
+    void send(
+      quickRouteTarget === null
+        ? { actionable: true, singleStep: true, delegable: true, delegatedTo: who }
+        : { quickRouteBucket: quickRouteTarget, delegatedTo: who },
+    )
   }
 
   return (
-    <section aria-label={`Clarify: ${item.title}`} style={{ marginTop: '1rem' }}>
-      <h3 style={{ color: 'var(--text-h)' }}>{item.title}</h3>
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clarify-heading"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && !submitting) {
+          onCancel()
+        }
+      }}
+      style={{ marginTop: '1rem' }}
+    >
+      <h3 id="clarify-heading" ref={headingRef} tabIndex={-1} style={{ color: 'var(--text-h)' }}>
+        Clarify: {item.title}
+      </h3>
 
       {step === 'actionable' && (
         <fieldset style={{ border: 0, padding: 0 }}>
@@ -81,6 +123,35 @@ export function ClarifyDialog({
           <button type="button" disabled={submitting} onClick={() => setStep('nonActionable')}>
             No
           </button>
+          <button type="button" disabled={submitting} onClick={() => setStep('quickRoute')}>
+            Skip the questions
+          </button>
+        </fieldset>
+      )}
+
+      {step === 'quickRoute' && (
+        <fieldset style={{ border: 0, padding: 0 }}>
+          <legend>File it directly</legend>
+          {QUICK_ROUTES.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              disabled={submitting}
+              onClick={() => {
+                if (value === 'delegation') {
+                  // Delegation still needs its who/what note (FR-007) — the quick-route
+                  // skips the questions, not the field that gives the bucket meaning.
+                  setQuickRouteTarget(value)
+                  setStep('delegatedTo')
+
+                  return
+                }
+                void send({ quickRouteBucket: value })
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </fieldset>
       )}
 
@@ -176,6 +247,7 @@ function previousStep(step: Exclude<Step, 'actionable'>): Step {
   switch (step) {
     case 'nonActionable':
     case 'singleStep':
+    case 'quickRoute':
       return 'actionable'
     case 'delegable':
       return 'singleStep'

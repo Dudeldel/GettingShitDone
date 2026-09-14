@@ -30,10 +30,16 @@ class ClarifyItemPayload
         public readonly ?string $delegatedTo,
     ) {}
 
-    /** FR-002: the user skipped the tree and picked a destination directly. */
-    public static function quickRoute(GtdBucket $bucket): self
+    /**
+     * FR-002: the user skipped the tree and picked a destination directly.
+     *
+     * Takes the delegation note too, because Delegation is a legal quick-route target and
+     * FR-007 makes the note part of what Delegation IS. Without it this branch could only
+     * ever throw — the destination would be reachable in name and impossible in practice.
+     */
+    public static function quickRoute(GtdBucket $bucket, ?string $delegatedTo = null): self
     {
-        return new self($bucket, null, null, null, null, null);
+        return new self($bucket, null, null, null, null, $delegatedTo);
     }
 
     /** FR-003: the user walked the tree; the domain derives the destination from these answers. */
@@ -58,7 +64,10 @@ class ClarifyItemPayload
     public static function fromArray(array $data): self
     {
         if (isset($data['quickRouteBucket'])) {
-            return self::quickRoute(GtdBucket::from((string) $data['quickRouteBucket']));
+            return self::quickRoute(
+                GtdBucket::from((string) $data['quickRouteBucket']),
+                isset($data['delegatedTo']) ? (string) $data['delegatedTo'] : null,
+            );
         }
 
         return self::treePath(
