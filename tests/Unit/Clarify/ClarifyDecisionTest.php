@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Clarify\ClarifyDecision;
+use App\Domain\Clarify\TwoMinuteOutcome;
 use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\ClarifyItemPayload;
 use App\Exceptions\InvalidClarificationException;
@@ -75,6 +76,7 @@ describe('an actionable item (FR-005, FR-007, FR-008)', function () {
         $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
+            twoMinutes: false,
             delegable: true,
             delegatedTo: 'Ania — sent the contract on Tuesday',
         ));
@@ -87,6 +89,7 @@ describe('an actionable item (FR-005, FR-007, FR-008)', function () {
         $outcome = ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
+            twoMinutes: false,
             delegable: false,
         ));
 
@@ -99,6 +102,7 @@ describe('an actionable item (FR-005, FR-007, FR-008)', function () {
         expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
+            twoMinutes: false,
             delegable: true,
         )))->toThrow(InvalidClarificationException::class);
     });
@@ -107,6 +111,7 @@ describe('an actionable item (FR-005, FR-007, FR-008)', function () {
         expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
+            twoMinutes: false,
             delegable: true,
             delegatedTo: '   ',
         )))->toThrow(InvalidClarificationException::class);
@@ -118,9 +123,13 @@ describe('an actionable item (FR-005, FR-007, FR-008)', function () {
     });
 
     it('refuses an unanswered delegable question', function () {
+        // twoMinutes answered, so the gap under test really is the delegable one — without
+        // it this would throw on the two-minute question instead and still pass, testing
+        // nothing about delegation.
         expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
+            twoMinutes: false,
         )))->toThrow(InvalidClarificationException::class);
     });
 });
@@ -156,16 +165,130 @@ it('never leaves a clarified item in the Inbox, on any path through the tree', f
         ClarifyItemPayload::treePath(actionable: false, nonActionableDestination: GtdBucket::SomedayMaybe),
         ClarifyItemPayload::treePath(actionable: false, nonActionableDestination: GtdBucket::Reference),
         ClarifyItemPayload::treePath(actionable: true, singleStep: false),
-        ClarifyItemPayload::treePath(actionable: true, singleStep: true, delegable: true, delegatedTo: 'Bob'),
-        ClarifyItemPayload::treePath(actionable: true, singleStep: true, delegable: false),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: false, delegable: true, delegatedTo: 'Bob'),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: false, delegable: false),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: true, twoMinuteOutcome: TwoMinuteOutcome::Done),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: true, twoMinuteOutcome: TwoMinuteOutcome::Deferred, delegable: false),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: true, twoMinuteOutcome: TwoMinuteOutcome::Deferred, delegable: true, delegatedTo: 'Bob'),
     ];
 
     foreach ($paths as $path) {
         expect($decision->decide($path)->bucket)->not->toBe(GtdBucket::Inbox);
     }
 
-    // Six paths is the complete set while the "< 2 min?" question belongs to S-03. If that
-    // count ever drops, a branch was removed; if it rises without this list growing, a
-    // branch is untested.
-    expect($paths)->toHaveCount(6);
+    // Nine paths is the complete set now that the "< 2 min?" question is in the tree: the
+    // six from S-02, plus done, plus deferred rejoining the tree on BOTH of its sides. If
+    // that count ever drops, a branch was removed; if it rises without this list growing,
+    // a branch is untested.
+    expect($paths)->toHaveCount(9);
+});
+
+/**
+ * FR-006. The expectations below come from the PRD's acceptance criterion — "a '< 2 min'
+ * item triggers a 2-minute timer; completion marks it done, 'need more time' loops the
+ * timer" — and from the resolution recorded in this change's change.md for the question the
+ * PRD leaves open: there is no Done bucket among the eight, so done is state, not a
+ * destination.
+ */
+describe('the two-minute rule (FR-006)', function () {
+    it('marks an item completed when the user finishes it inside the timer', function () {
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Done,
+        ));
+
+        expect($outcome->completed)->toBeTrue()
+            // Next Actions, because that is what the item already was. A done item still
+            // needs exactly one bucket (FR-008) and there is no ninth one to invent.
+            ->and($outcome->bucket)->toBe(GtdBucket::NextActions);
+    });
+
+    it('never asks about delegation once the item is already done', function () {
+        // Ordering, expressed as behaviour: the done branch terminates BEFORE "can it be
+        // delegated?" is consulted. If the questions were reordered, or the done branch fell
+        // through, these delegation answers would win and the item would land in Delegation —
+        // filed as waiting on someone for work that is already finished.
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Done,
+            delegable: true,
+            delegatedTo: 'Ania',
+        ));
+
+        expect($outcome->bucket)->toBe(GtdBucket::NextActions)
+            ->and($outcome->delegatedTo)->toBeNull()
+            ->and($outcome->completed)->toBeTrue();
+    });
+
+    it('returns a deferred item to the tree rather than filing it', function () {
+        // "Explicitly deferred" in the PRD's Business Logic does NOT mean "done with it" —
+        // the user still has to answer the last question. Treating deferral as a terminal
+        // outcome would file an unclarified item.
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Deferred,
+            delegable: false,
+        ));
+
+        expect($outcome->bucket)->toBe(GtdBucket::NextActions)
+            // The item was NOT finished. Marking a deferred item done would tell the user
+            // they did work they explicitly said they had not done.
+            ->and($outcome->completed)->toBeFalse();
+    });
+
+    it('lets a deferred item still be delegated', function () {
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Deferred,
+            delegable: true,
+            delegatedTo: 'Piotr — quoted on Monday',
+        ));
+
+        expect($outcome->bucket)->toBe(GtdBucket::Delegation)
+            ->and($outcome->delegatedTo)->toBe('Piotr — quoted on Monday')
+            ->and($outcome->completed)->toBeFalse();
+    });
+
+    it('refuses an unanswered two-minute question', function () {
+        expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+        )))->toThrow(InvalidClarificationException::class);
+    });
+
+    it('refuses a timer that started and never ended', function () {
+        // Defaulting either way is the failure: "done" invents work the user never did,
+        // "deferred" discards work they did.
+        expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+        )))->toThrow(InvalidClarificationException::class);
+    });
+
+    it('does not complete an item that never went near the timer', function () {
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: false,
+            delegable: false,
+        ));
+
+        expect($outcome->completed)->toBeFalse();
+    });
+
+    it('does not complete an item filed by the quick-route', function () {
+        // The quick-route skips the questions, so no timer ever ran. An item marked done
+        // here would be a completion nobody performed.
+        expect((new ClarifyDecision)->decide(ClarifyItemPayload::quickRoute(GtdBucket::NextActions))->completed)
+            ->toBeFalse();
+    });
 });

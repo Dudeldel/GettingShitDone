@@ -34,7 +34,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | done (absorbed by F-01+F-02) |
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | done |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | done |
-| S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | proposed |
+| S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | in-progress |
 | S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | absorbed by S-02 |
 | S-05 | eight-bucket-views         | open and view all 8 GTD buckets, and empty the Trash             | S-01          | FR-009 (+ Trash purge, no FR)     | done |
 | S-06 | dates-and-calendar-bucket  | assign a date to an item and see it in the Calendar/Dates bucket | S-01, S-05    | FR-011                            | proposed |
@@ -170,9 +170,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** S-02
 - **Parallel with:** S-04
 - **Blockers:** —
-- **Unknowns:** —
+- **Unknowns:**
+  - Where a *completed* 2-minute item lands: there is no Done bucket among the eight, yet
+    FR-008 requires exactly one. Resolved in `context/changes/two-minute-rule-timer/change.md`
+    — done is a state (`completed_at`), not a destination; the item lands in Next Actions.
+    Owner: user. Block: no.
 - **Risk:** A focused addition to the clarify flow built in S-02. The 120-second threshold is a domain constant (`app/Const/`), not a literal; the timed loop is the only stateful UX in clarify, so it is isolated here rather than tangled into the routing engine.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-04: Promote a multi-step item to a Project
 

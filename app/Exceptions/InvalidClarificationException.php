@@ -34,6 +34,16 @@ class InvalidClarificationException extends RuntimeException
         return new self('Clarify needs an answer to "is it a single step?".');
     }
 
+    public static function missingTwoMinuteAnswer(): self
+    {
+        return new self('Clarify needs an answer to "does it take less than two minutes?".');
+    }
+
+    public static function missingTwoMinuteOutcome(): self
+    {
+        return new self('The two-minute timer needs an outcome: done, or more time needed.');
+    }
+
     public static function missingDelegableAnswer(): self
     {
         return new self('Clarify needs an answer to "can it be delegated?".');

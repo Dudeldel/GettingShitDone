@@ -12,6 +12,8 @@ use JsonSerializable;
  * The five metadata fields are read-only and always null until S-06 (dates) and S-07
  * (tags/contexts/flags) add their write paths. delegatedTo/delegationDone are filled by
  * clarify (FR-007) and are null for the seven buckets that are not Delegation.
+ * completedAt is set only when clarify's two-minute timer ended in "done" (FR-006); null
+ * everywhere else means "not finished", not "unknown".
  *
  * @implements Arrayable<string, mixed>
  */
@@ -34,6 +36,7 @@ class ItemDto implements Arrayable, JsonSerializable
         public readonly ?bool $urgent = null,
         public readonly ?string $delegatedTo = null,
         public readonly ?bool $delegationDone = null,
+        public readonly ?string $completedAt = null,
     ) {}
 
     /**
@@ -58,11 +61,12 @@ class ItemDto implements Arrayable, JsonSerializable
             urgent: isset($item['urgent']) ? (bool) $item['urgent'] : null,
             delegatedTo: isset($item['delegatedTo']) ? (string) $item['delegatedTo'] : null,
             delegationDone: isset($item['delegationDone']) ? (bool) $item['delegationDone'] : null,
+            completedAt: isset($item['completedAt']) ? (string) $item['completedAt'] : null,
         );
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, completedAt: string|null, createdAt: string, updatedAt: string}
      */
     public function toArray(): array
     {
@@ -78,13 +82,14 @@ class ItemDto implements Arrayable, JsonSerializable
             'urgent' => $this->urgent,
             'delegatedTo' => $this->delegatedTo,
             'delegationDone' => $this->delegationDone,
+            'completedAt' => $this->completedAt,
             'createdAt' => $this->createdAt,
             'updatedAt' => $this->updatedAt,
         ];
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, completedAt: string|null, createdAt: string, updatedAt: string}
      */
     public function jsonSerialize(): array
     {

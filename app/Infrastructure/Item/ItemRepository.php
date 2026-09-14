@@ -52,6 +52,10 @@ class ItemRepository implements ItemRepositoryInterface
                     'bucket' => $outcome->bucket->value,
                     'delegated_to' => $outcome->delegatedTo,
                     'delegation_done' => $outcome->delegatedTo === null ? null : false,
+                    // FR-006: written in the SAME statement as the bucket, so an item can
+                    // never be filed-but-not-marked-done (or the reverse) — the two facts
+                    // about a two-minute completion land together or not at all.
+                    'completed_at' => $outcome->completed ? now() : null,
                     // Query-builder updates bypass Eloquent, so timestamps are ours to set.
                     'updated_at' => now(),
                 ]);
@@ -125,6 +129,7 @@ class ItemRepository implements ItemRepositoryInterface
             urgent: $item->urgent,
             delegatedTo: $item->delegated_to,
             delegationDone: $item->delegation_done,
+            completedAt: $item->completed_at?->toIso8601String(),
         );
     }
 }

@@ -16,16 +16,30 @@ final readonly class ClarifyOutcome
     private function __construct(
         public GtdBucket $bucket,
         public ?string $delegatedTo,
+        public bool $completed,
     ) {}
 
     public static function to(GtdBucket $bucket): self
     {
-        return new self($bucket, null);
+        return new self($bucket, null, false);
     }
 
     /** FR-007: Delegation always carries the free-text who/what note it was created with. */
     public static function delegatedTo(string $who): self
     {
-        return new self(GtdBucket::Delegation, $who);
+        return new self(GtdBucket::Delegation, $who, false);
+    }
+
+    /**
+     * FR-006: the user did it inside the two minutes.
+     *
+     * Next Actions, because that is what the item already WAS — actionable, single-step,
+     * not delegated. Doing it immediately changes its state, not its classification, and
+     * there is no Done bucket among the eight (FR-009) for it to change class into. The
+     * completion is carried as state so FR-008's exactly-one-bucket invariant still holds.
+     */
+    public static function completedInTwoMinutes(): self
+    {
+        return new self(GtdBucket::NextActions, null, true);
     }
 }

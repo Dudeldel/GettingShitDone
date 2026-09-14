@@ -103,6 +103,7 @@ function fakeItemRepository(bool $failing = false)
                 updatedAt: '2026-09-07T10:00:00+00:00',
                 delegatedTo: $outcome->delegatedTo,
                 delegationDone: $outcome->delegatedTo === null ? null : false,
+                completedAt: $outcome->completed ? '2026-09-14T12:00:00+00:00' : null,
             );
         }
 

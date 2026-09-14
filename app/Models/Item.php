@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * deliberately NOT fillable: S-06/S-07 add their write paths together with validation.
  * The Delegation columns (delegated_to, delegation_done) are likewise not fillable —
  * clarify writes them through an explicit update, so no request array can reach them.
+ * completed_at (FR-006) follows the same rule: only the clarify write path sets it.
  *
  * @property int $id
  * @property string $title
@@ -26,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property bool|null $urgent
  * @property string|null $delegated_to
  * @property bool|null $delegation_done
+ * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -44,6 +46,7 @@ class Item extends Model
             'important' => 'boolean',
             'urgent' => 'boolean',
             'delegation_done' => 'boolean',
+            'completed_at' => 'datetime',
         ];
     }
 }

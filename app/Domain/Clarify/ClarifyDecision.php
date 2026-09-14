@@ -12,18 +12,21 @@ use App\Exceptions\InvalidClarificationException;
  * Pure PHP: no Eloquent, no framework, no HTTP. This is the only place the tree is encoded,
  * and it is the whole correctness surface of this slice.
  *
- * The canonical GTD order is `actionable? → single step? → < 2 min? → delegable?`. The
- * `< 2 min?` question is absent here on purpose: it belongs to S-03 together with the timer
- * and the decision about where a *completed* item goes — there is no Done bucket among the
- * eight. S-03 inserts that question between single-step and delegable; every path below
- * terminates without it, which is what makes FR-008 provable today.
+ * The canonical GTD order is complete here: `actionable? → single step? → < 2 min? →
+ * delegable?` (FR-003).
  *
  * Terminating paths:
  *
  *   actionable = false                          → Trash | Someday/Maybe | Reference  (FR-004)
  *   actionable, not single-step                 → Projects                           (FR-005)
+ *   actionable, single-step, < 2 min, done      → Next Actions, completed            (FR-006)
  *   actionable, single-step, delegable          → Delegation + who/what              (FR-007)
  *   actionable, single-step, not delegable      → Next Actions                       (FR-008)
+ *
+ * The `< 2 min?` branch is the only one that does not always terminate: a DEFERRED timer
+ * falls through to "can it be delegated?" and rejoins the paths above. That is what the
+ * PRD means by holding the user "until it is done or explicitly deferred" — deferring
+ * returns them to the tree, it does not file the item.
  *
  * No path returns Inbox, and no path returns null: an item that has been clarified has
  * moved, by construction.
@@ -99,6 +102,26 @@ class ClarifyDecision
         // destination bucket — no hierarchy, no linked next actions (FR-012 is parked).
         if (! $payload->singleStep) {
             return ClarifyOutcome::to(GtdBucket::Projects);
+        }
+
+        // FR-006: the two-minute rule sits between "single step?" and "can it be delegated?".
+        // Asking it later would let the user delegate something they were about to do in a
+        // minute; asking it earlier would apply it to multi-step projects.
+        if ($payload->twoMinutes === null) {
+            throw InvalidClarificationException::missingTwoMinuteAnswer();
+        }
+
+        if ($payload->twoMinutes) {
+            if ($payload->twoMinuteOutcome === null) {
+                // A timer that was started must have ended somehow. Defaulting either way
+                // would either invent work the user never did or discard work they did.
+                throw InvalidClarificationException::missingTwoMinuteOutcome();
+            }
+
+            if ($payload->twoMinuteOutcome === TwoMinuteOutcome::Done) {
+                return ClarifyOutcome::completedInTwoMinutes();
+            }
+            // Deferred: the item is still unfiled, so it carries on to the last question.
         }
 
         if ($payload->delegable === null) {

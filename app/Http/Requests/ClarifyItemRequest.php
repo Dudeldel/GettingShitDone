@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Const\ClarifyConst;
 use App\Const\ItemConst;
+use App\Domain\Clarify\TwoMinuteOutcome;
 use App\Domain\Item\GtdBucket;
 use App\Filters\FreeTextSanitizer;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,7 +52,7 @@ class ClarifyItemRequest extends FormRequest
             'quickRouteBucket' => [
                 'nullable',
                 Rule::enum(GtdBucket::class),
-                'prohibits:actionable,nonActionableDestination,singleStep,delegable',
+                'prohibits:actionable,nonActionableDestination,singleStep,twoMinutes,twoMinuteOutcome,twoMinuteLoops,delegable',
             ],
             // The first question of the tree (FR-003). Required unless quick-routing.
             'actionable' => ['required_without:quickRouteBucket', 'boolean'],
@@ -68,8 +70,46 @@ class ClarifyItemRequest extends FormRequest
             ],
             // Asked only once the item is actionable.
             'singleStep' => ['required_if_accepted:actionable', 'boolean'],
-            // Asked only once the item is a single step.
-            'delegable' => ['required_if_accepted:singleStep', 'boolean'],
+            /**
+             * FR-006: the two-minute rule. Asked once the item is a single step, and BEFORE
+             * "can it be delegated?" — the canonical GTD order (FR-003).
+             */
+            'twoMinutes' => ['required_if_accepted:singleStep', 'boolean'],
+            /**
+             * How the timer ended. Required once a timer ran, and meaningless without one —
+             * an outcome for a timer that never started would be a recorded fact about
+             * nothing.
+             */
+            'twoMinuteOutcome' => [
+                'required_if_accepted:twoMinutes',
+                'prohibited_if_declined:twoMinutes',
+                Rule::enum(TwoMinuteOutcome::class),
+            ],
+            /**
+             * How many times the user asked for more time. Observability only (it is logged,
+             * never stored), but it still arrives from a client, so it is bounded like any
+             * other input rather than trusted straight into a log line.
+             */
+            'twoMinuteLoops' => [
+                'prohibited_if_declined:twoMinutes',
+                'nullable',
+                'integer',
+                'min:0',
+                'max:'.ClarifyConst::MAX_TWO_MINUTE_LOOPS,
+            ],
+            /**
+             * Asked only when the item is still unfiled after the two-minute question:
+             * either it does not fit in two minutes, or the timer ran and the user deferred.
+             * Prohibited when the timer ended in "done" — you cannot delegate a thing you
+             * have already finished, and accepting the field would make two contradictory
+             * answers valid in one payload.
+             */
+            'delegable' => [
+                'required_if_declined:twoMinutes',
+                'required_if:twoMinuteOutcome,'.TwoMinuteOutcome::Deferred->value,
+                'prohibited_if:twoMinuteOutcome,'.TwoMinuteOutcome::Done->value,
+                'boolean',
+            ],
             /**
              * FR-007: Delegation IS the who/what note — without it the bucket records that
              * something is delegated but not whom to chase.

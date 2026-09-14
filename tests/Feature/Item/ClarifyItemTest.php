@@ -1,5 +1,6 @@
 <?php
 
+use App\Const\ClarifyConst;
 use App\Const\ItemConst;
 use App\Domain\Item\GtdBucket;
 use App\Models\Item;
@@ -33,9 +34,12 @@ it('routes an actionable single-step item to Next Actions', function () {
     test()->postJson("/api/items/{$id}/clarify", [
         'actionable' => true,
         'singleStep' => true,
+        'twoMinutes' => false,
         'delegable' => false,
     ])->assertStatus(Response::HTTP_OK)
-        ->assertJsonPath('bucket', 'next_actions');
+        ->assertJsonPath('bucket', 'next_actions')
+        // Not done: only the two-minute timer completes an item, and this path never ran one.
+        ->assertJsonPath('completedAt', null);
 
     // It is really in Next Actions...
     test()->getJson('/api/items?bucket=next_actions')
@@ -56,6 +60,7 @@ it('routes a delegable item to Delegation and keeps the who/what note', function
     test()->postJson("/api/items/{$id}/clarify", [
         'actionable' => true,
         'singleStep' => true,
+        'twoMinutes' => false,
         'delegable' => true,
         'delegatedTo' => 'Ania — sent the contract on Tuesday',
     ])->assertStatus(Response::HTTP_OK)
@@ -131,6 +136,7 @@ it('refuses to delegate without saying who is being waited on', function () {
     test()->postJson("/api/items/{$id}/clarify", [
         'actionable' => true,
         'singleStep' => true,
+        'twoMinutes' => false,
         'delegable' => true,
     ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 
@@ -156,6 +162,7 @@ it('refuses a payload that mixes the quick-route with tree answers', function ()
         'quickRouteBucket' => 'trash',
         'actionable' => true,
         'singleStep' => true,
+        'twoMinutes' => false,
         'delegable' => false,
     ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 });
@@ -235,12 +242,16 @@ it('names the field that failed, not just the status', function () {
     test()->postJson("/api/items/{$id}/clarify", [
         'actionable' => true,
         'singleStep' => true,
+        'twoMinutes' => false,
         'delegable' => true,
     ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
         ->assertJsonValidationErrors(['delegatedTo']);
 
     test()->postJson("/api/items/{$id}/clarify", ['actionable' => true])
         ->assertJsonValidationErrors(['singleStep']);
+
+    test()->postJson("/api/items/{$id}/clarify", ['actionable' => true, 'singleStep' => true])
+        ->assertJsonValidationErrors(['twoMinutes']);
 
     test()->postJson("/api/items/{$id}/clarify", ['actionable' => false])
         ->assertJsonValidationErrors(['nonActionableDestination']);
@@ -285,4 +296,177 @@ it('reports a failed clarify as 500 and leaves the item in the Inbox', function 
             && $context['bucket'] === 'trash'
             && ! str_contains(json_encode($context), '4711');
     });
+});
+
+/**
+ * FR-006 end to end. Same durability oracle as the rest of this file: a 200 proves the
+ * service returned, not that the row moved — every transition is read back through a
+ * SEPARATE request.
+ */
+it('completes an item finished inside the two-minute timer', function () {
+    $id = captureForClarify('reply to the landlord');
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'twoMinuteLoops' => 0,
+    ])->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('bucket', 'next_actions');
+
+    // Read it back: it is in Next Actions AND carries a completion time. Asserting only the
+    // bucket would pass against an implementation that never wrote completed_at, which is
+    // the whole state this slice adds.
+    $listed = test()->getJson('/api/items?bucket=next_actions')
+        ->assertStatus(Response::HTTP_OK)
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $id)
+        ->json('0.completedAt');
+
+    expect($listed)->not->toBeNull();
+
+    // And gone from the Inbox — a completed item is still a clarified item (FR-008).
+    test()->getJson('/api/items')->assertJsonCount(0);
+});
+
+it('leaves a deferred item unfinished and still in the tree', function () {
+    $id = captureForClarify('call the garage');
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'deferred',
+        'twoMinuteLoops' => 3,
+        'delegable' => false,
+    ])->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('bucket', 'next_actions')
+        // The user said they had NOT done it. Recording it as done would be the app
+        // asserting work that never happened.
+        ->assertJsonPath('completedAt', null);
+
+    test()->getJson('/api/items?bucket=next_actions')->assertJsonPath('0.completedAt', null);
+});
+
+it('lets a deferred item be delegated on the same pass', function () {
+    $id = captureForClarify('chase the plumber');
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'deferred',
+        'twoMinuteLoops' => 1,
+        'delegable' => true,
+        'delegatedTo' => 'Piotr — quoted on Monday',
+    ])->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('bucket', 'delegation')
+        ->assertJsonPath('delegatedTo', 'Piotr — quoted on Monday')
+        ->assertJsonPath('completedAt', null);
+});
+
+it('refuses a timer that was started and never ended', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['twoMinuteOutcome']);
+
+    test()->getJson('/api/items')->assertJsonCount(1);
+});
+
+it('refuses to delegate an item the user has already finished', function () {
+    // Two contradictory answers in one payload: done, and waiting on someone else to do it.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'delegable' => true,
+        'delegatedTo' => 'Ania',
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['delegable']);
+});
+
+it('refuses a timer outcome for a timer that never ran', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => false,
+        'twoMinuteOutcome' => 'done',
+        'delegable' => false,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['twoMinuteOutcome']);
+});
+
+it('refuses two-minute answers on the quick-route, which asks no questions', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'quickRouteBucket' => 'next_actions',
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+
+    test()->getJson('/api/items')->assertJsonCount(1);
+});
+
+it('refuses an absurd loop count rather than writing it to a log line', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'twoMinuteLoops' => ClarifyConst::MAX_TWO_MINUTE_LOOPS + 1,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['twoMinuteLoops']);
+});
+
+it('records the timer outcome and the loop count, without the captured text', function () {
+    // FR-006 asks for the outcome to be RECORDED, not merely acted on. completed_at is the
+    // durable half; the loop count exists only here.
+    $id = captureForClarify('my bank pin is 4711');
+    Log::spy();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'deferred',
+        'twoMinuteLoops' => 2,
+        'delegable' => false,
+    ])->assertStatus(Response::HTTP_OK);
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) use ($id) {
+        return $message === 'clarify.two_minute_rule.deferred'
+            && $context['item_id'] === $id
+            && $context['two_minute_outcome'] === 'deferred'
+            && $context['two_minute_loops'] === 2
+            && ! str_contains(json_encode($context), '4711');
+    });
+});
+
+it('records nothing about a timer for an item that never triggered one', function () {
+    $id = captureForClarify();
+    Log::spy();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => false,
+        'delegable' => false,
+    ])->assertStatus(Response::HTTP_OK);
+
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.done', Mockery::any()]);
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.deferred', Mockery::any()]);
 });

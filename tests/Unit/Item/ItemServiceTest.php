@@ -66,7 +66,7 @@ it('derives the destination from the answers and hands it to the repository', fu
 
     $dto = (new ItemService($repo, new ClarifyDecision))->clarify(
         7,
-        ClarifyItemPayload::treePath(actionable: true, singleStep: true, delegable: false),
+        ClarifyItemPayload::treePath(actionable: true, singleStep: true, twoMinutes: false, delegable: false),
     );
 
     // The service must not accept a destination — it asks the domain for one.

@@ -2,6 +2,7 @@
 
 namespace App\Logging;
 
+use App\Domain\Clarify\TwoMinuteOutcome;
 use App\Domain\Item\GtdBucket;
 use Illuminate\Support\Facades\Log;
 
@@ -42,6 +43,28 @@ class LogEvent
         self::emit('item.clarified.success', 'database', 'success', [
             'item_id' => $itemId,
             'bucket' => $bucket->value,
+        ]);
+    }
+
+    /**
+     * A two-minute timer ran during clarify and ended (FR-006: "records the outcome
+     * (done / loop)").
+     *
+     * The loop count lives here rather than in a column on purpose: nothing in the MVP
+     * reads it back, and a stored value with no reader is state that has to be kept correct
+     * forever for nobody. The durable half of the record is completed_at on the item; this
+     * is the observability half, and it is the only place the loops are visible at all.
+     *
+     * @param  int  $itemId  the item the timer ran for
+     * @param  TwoMinuteOutcome  $outcome  done (the user finished it) or deferred
+     * @param  int  $loops  how many times the user asked for more time before deciding
+     */
+    public static function twoMinuteRuleApplied(int $itemId, TwoMinuteOutcome $outcome, int $loops): void
+    {
+        self::emit('clarify.two_minute_rule.'.$outcome->value, 'session', 'success', [
+            'item_id' => $itemId,
+            'two_minute_outcome' => $outcome->value,
+            'two_minute_loops' => $loops,
         ]);
     }
 
