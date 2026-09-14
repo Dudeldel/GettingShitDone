@@ -4,29 +4,33 @@ use App\Logging\LogEvent;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Demonstrates the intended pattern: a named static method delegating to the protected
- * LogEvent::emit() building block. Application code adds such methods to LogEvent itself;
- * this fixture stands in until the first real domain event lands.
+ * Pins the generic `emit()` envelope: a named static method delegating to the protected
+ * building block, producing the ECS `event.*` shape every domain event must carry.
+ *
+ * The fixture method is named after nothing in the domain ON PURPOSE. It was originally
+ * called `itemClarified()`, which collided with a fatal error the moment S-02 added the real
+ * `LogEvent::itemClarified()` with a different signature — a subclass cannot narrow its
+ * parent. Any name used here must stay one that no slice will ever want.
  */
 class FixtureDomainEvent extends LogEvent
 {
-    public static function itemClarified(string $itemId): void
+    public static function fixtureEventOccurred(string $subjectId): void
     {
-        self::emit('item.clarified.success', 'web', 'success', ['itemId' => $itemId]);
+        self::emit('fixture.event.success', 'web', 'success', ['subjectId' => $subjectId]);
     }
 }
 
 it('emits a structured domain event with the event.* envelope via a named method', function () {
     Log::spy();
 
-    FixtureDomainEvent::itemClarified('ITEM-1');
+    FixtureDomainEvent::fixtureEventOccurred('SUBJECT-1');
 
     Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
         return $level === 'info'
-            && $message === 'item.clarified.success'
-            && $context['event']['action'] === 'item.clarified.success'
+            && $message === 'fixture.event.success'
+            && $context['event']['action'] === 'fixture.event.success'
             && $context['event']['category'] === 'web'
             && $context['event']['outcome'] === 'success'
-            && $context['itemId'] === 'ITEM-1';
+            && $context['subjectId'] === 'SUBJECT-1';
     });
 });

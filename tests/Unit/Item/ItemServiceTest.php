@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Clarify\ClarifyDecision;
 use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Exceptions\ItemPersistenceException;
@@ -14,7 +15,7 @@ uses(TestCase::class);
 it('captures into the Inbox regardless of what the caller passes', function () {
     $repo = fakeItemRepository();
 
-    $dto = (new ItemService($repo))->capture(new CaptureItemPayload('buy milk', null));
+    $dto = (new ItemService($repo, new ClarifyDecision))->capture(new CaptureItemPayload('buy milk', null));
 
     expect($repo->createdInBucket)->toBe(GtdBucket::Inbox)
         ->and($repo->createdFrom?->title)->toBe('buy milk')
@@ -25,7 +26,7 @@ it('captures into the Inbox regardless of what the caller passes', function () {
 it('emits the capture domain event with the new item id', function () {
     Log::spy();
 
-    (new ItemService(fakeItemRepository()))->capture(new CaptureItemPayload('idea', null));
+    (new ItemService(fakeItemRepository(), new ClarifyDecision))->capture(new CaptureItemPayload('idea', null));
 
     Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
         return $message === 'item.captured.success'
@@ -37,7 +38,7 @@ it('emits the capture domain event with the new item id', function () {
 it('delegates listing to the repository with the requested bucket', function () {
     $repo = fakeItemRepository();
 
-    (new ItemService($repo))->listByBucket(GtdBucket::Reference);
+    (new ItemService($repo, new ClarifyDecision))->listByBucket(GtdBucket::Reference);
 
     expect($repo->listedBucket)->toBe(GtdBucket::Reference);
 });
@@ -45,7 +46,7 @@ it('delegates listing to the repository with the requested bucket', function () 
 it('emits a failure event and rethrows when the write fails', function () {
     Log::spy();
 
-    expect(fn () => (new ItemService(fakeItemRepository(failing: true)))
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true), new ClarifyDecision))
         ->capture(new CaptureItemPayload('my bank pin is 4711', null)))
         ->toThrow(ItemPersistenceException::class);
 

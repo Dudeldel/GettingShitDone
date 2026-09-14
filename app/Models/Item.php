@@ -12,6 +12,8 @@ use Illuminate\Support\Carbon;
  *
  * The dormant metadata columns (due_date, tags, context, important, urgent) are cast but
  * deliberately NOT fillable: S-06/S-07 add their write paths together with validation.
+ * The Delegation columns (delegated_to, delegation_done) are likewise not fillable —
+ * clarify writes them through an explicit update, so no request array can reach them.
  *
  * @property int $id
  * @property string $title
@@ -22,6 +24,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $context
  * @property bool|null $important
  * @property bool|null $urgent
+ * @property string|null $delegated_to
+ * @property bool|null $delegation_done
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -39,6 +43,7 @@ class Item extends Model
             'tags' => 'array',
             'important' => 'boolean',
             'urgent' => 'boolean',
+            'delegation_done' => 'boolean',
         ];
     }
 }

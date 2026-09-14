@@ -83,7 +83,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | implemented | `context/changes/testing-capture-durability/` |
+| 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | complete | `context/archive/2026-09-14-testing-capture-durability/` |
 | 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | not started | — |
 | 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
 | 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | not started | — |

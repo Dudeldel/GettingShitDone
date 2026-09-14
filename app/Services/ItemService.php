@@ -2,10 +2,15 @@
 
 namespace App\Services;
 
+use App\Domain\Clarify\ClarifyDecision;
 use App\Domain\Item\GtdBucket;
 use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Dto\Payload\ClarifyItemPayload;
+use App\Exceptions\InvalidClarificationException;
+use App\Exceptions\ItemNotFoundException;
+use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
 use App\Logging\LogEvent;
 use Illuminate\Support\Collection;
@@ -16,7 +21,10 @@ use Illuminate\Support\Collection;
  */
 class ItemService
 {
-    public function __construct(private readonly ItemRepositoryInterface $items) {}
+    public function __construct(
+        private readonly ItemRepositoryInterface $items,
+        private readonly ClarifyDecision $decision,
+    ) {}
 
     /**
      * Capture a free-text idea (FR-001).
@@ -37,6 +45,35 @@ class ItemService
         }
 
         LogEvent::itemCaptured($item->id, $item->bucket);
+
+        return $item;
+    }
+
+    /**
+     * Clarify an Inbox item (FR-002, FR-003, FR-008).
+     *
+     * The destination is derived here from the user's ANSWERS, never taken from the request
+     * — the same discipline as capture, where the bucket is applied by the service rather
+     * than accepted from the client.
+     *
+     * @throws InvalidClarificationException the answers do not describe a complete path
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemNotInInboxException the item has already been clarified
+     * @throws ItemPersistenceException the write failed
+     */
+    public function clarify(int $itemId, ClarifyItemPayload $payload): ItemDto
+    {
+        $outcome = $this->decision->decide($payload);
+
+        try {
+            $item = $this->items->clarify($itemId, $outcome);
+        } catch (ItemPersistenceException $e) {
+            LogEvent::itemClarifyFailed($itemId, $outcome->bucket, $e->sqlState());
+
+            throw $e;
+        }
+
+        LogEvent::itemClarified($item->id, $item->bucket);
 
         return $item;
     }

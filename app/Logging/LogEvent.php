@@ -32,6 +32,38 @@ class LogEvent
     }
 
     /**
+     * An item was routed out of the Inbox by clarify (FR-008).
+     *
+     * @param  int  $itemId  the clarified item
+     * @param  GtdBucket  $bucket  the single destination it landed in
+     */
+    public static function itemClarified(int $itemId, GtdBucket $bucket): void
+    {
+        self::emit('item.clarified.success', 'database', 'success', [
+            'item_id' => $itemId,
+            'bucket' => $bucket->value,
+        ]);
+    }
+
+    /**
+     * A clarification could not be applied (FR-008, guardrail "clarify never leaves an item
+     * without a bucket"). Carries the intended destination and a reason, never the item's
+     * text — the same privacy rule as the capture events.
+     *
+     * @param  int  $itemId  the item that stayed put
+     * @param  GtdBucket  $bucket  where it was meant to go
+     * @param  string  $reason  SQLSTATE or a short cause, never a query or its bindings
+     */
+    public static function itemClarifyFailed(int $itemId, GtdBucket $bucket, string $reason): void
+    {
+        self::emit('item.clarified.failure', 'database', 'failure', [
+            'item_id' => $itemId,
+            'bucket' => $bucket->value,
+            'reason' => $reason,
+        ], 'error');
+    }
+
+    /**
      * A capture could not be persisted (FR-001, guardrail "capture never loses an entry").
      *
      * @param  GtdBucket  $bucket  the intended destination

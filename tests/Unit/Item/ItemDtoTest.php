@@ -23,6 +23,8 @@ it('serializes an item with the bucket as its backing string', function () {
         'context' => null,
         'important' => null,
         'urgent' => null,
+        'delegatedTo' => null,
+        'delegationDone' => null,
         'createdAt' => '2026-09-07T10:00:00+00:00',
         'updatedAt' => '2026-09-07T10:00:00+00:00',
     ]);
@@ -56,6 +58,8 @@ it('round-trips through fromArray and toArray', function () {
         'context' => '@computer',
         'important' => true,
         'urgent' => false,
+        'delegatedTo' => null,
+        'delegationDone' => null,
         'createdAt' => '2026-09-07T10:00:00+00:00',
         'updatedAt' => '2026-09-07T11:00:00+00:00',
     ];

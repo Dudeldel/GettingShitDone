@@ -13,4 +13,7 @@ final class ItemConst
 
     /** Upper bound on the optional long-form note — guards the request body without truncating a real thought. */
     public const NOTE_MAX_LENGTH = 10000;
+
+    /** Matches the items.delegated_to column; a "who / what" note (FR-007), not a contact record. */
+    public const DELEGATED_TO_MAX_LENGTH = 255;
 }

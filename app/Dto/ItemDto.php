@@ -9,9 +9,9 @@ use JsonSerializable;
 /**
  * Transport shape for a GTD item, between layers and out over the API.
  *
- * The five metadata fields are read-only and always null in S-01 — they exist so the
- * client's item shape stays stable when S-06 (dates) and S-07 (tags/contexts/flags)
- * start filling them.
+ * The five metadata fields are read-only and always null until S-06 (dates) and S-07
+ * (tags/contexts/flags) add their write paths. delegatedTo/delegationDone are filled by
+ * clarify (FR-007) and are null for the seven buckets that are not Delegation.
  *
  * @implements Arrayable<string, mixed>
  */
@@ -32,6 +32,8 @@ class ItemDto implements Arrayable, JsonSerializable
         public readonly ?string $context = null,
         public readonly ?bool $important = null,
         public readonly ?bool $urgent = null,
+        public readonly ?string $delegatedTo = null,
+        public readonly ?bool $delegationDone = null,
     ) {}
 
     /**
@@ -54,11 +56,13 @@ class ItemDto implements Arrayable, JsonSerializable
             context: isset($item['context']) ? (string) $item['context'] : null,
             important: isset($item['important']) ? (bool) $item['important'] : null,
             urgent: isset($item['urgent']) ? (bool) $item['urgent'] : null,
+            delegatedTo: isset($item['delegatedTo']) ? (string) $item['delegatedTo'] : null,
+            delegationDone: isset($item['delegationDone']) ? (bool) $item['delegationDone'] : null,
         );
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, createdAt: string, updatedAt: string}
      */
     public function toArray(): array
     {
@@ -72,13 +76,15 @@ class ItemDto implements Arrayable, JsonSerializable
             'context' => $this->context,
             'important' => $this->important,
             'urgent' => $this->urgent,
+            'delegatedTo' => $this->delegatedTo,
+            'delegationDone' => $this->delegationDone,
             'createdAt' => $this->createdAt,
             'updatedAt' => $this->updatedAt,
         ];
     }
 
     /**
-     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, createdAt: string, updatedAt: string}
+     * @return array{id: int, title: string, note: string|null, bucket: string, dueDate: string|null, tags: list<string>|null, context: string|null, important: bool|null, urgent: bool|null, delegatedTo: string|null, delegationDone: bool|null, createdAt: string, updatedAt: string}
      */
     public function jsonSerialize(): array
     {

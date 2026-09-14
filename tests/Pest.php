@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Clarify\ClarifyOutcome;
 use App\Domain\Item\GtdBucket;
 use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
@@ -59,6 +60,10 @@ function fakeItemRepository(bool $failing = false)
 
         public ?GtdBucket $listedBucket = null;
 
+        public ?int $clarifiedItemId = null;
+
+        public ?ClarifyOutcome $clarifiedTo = null;
+
         public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
         {
             if ($this->failing) {
@@ -75,6 +80,27 @@ function fakeItemRepository(bool $failing = false)
                 bucket: $bucket,
                 createdAt: '2026-09-07T10:00:00+00:00',
                 updatedAt: '2026-09-07T10:00:00+00:00',
+            );
+        }
+
+        public function clarify(int $itemId, ClarifyOutcome $outcome): ItemDto
+        {
+            if ($this->failing) {
+                throw new ItemPersistenceException('HY000');
+            }
+
+            $this->clarifiedItemId = $itemId;
+            $this->clarifiedTo = $outcome;
+
+            return new ItemDto(
+                id: $itemId,
+                title: 'an idea',
+                note: null,
+                bucket: $outcome->bucket,
+                createdAt: '2026-09-07T10:00:00+00:00',
+                updatedAt: '2026-09-07T10:00:00+00:00',
+                delegatedTo: $outcome->delegatedTo,
+                delegationDone: $outcome->delegatedTo === null ? null : false,
             );
         }
 
