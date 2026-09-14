@@ -307,13 +307,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** S-06, S-07, S-09 — different surface, but it will touch every component
   file, so running it concurrently with a feature slice means constant merge conflicts.
 - **Blockers:** —
-- **Unknowns:**
-  - What "looks designed" means here, concretely enough to accept or reject a result. Owner:
-    user. Block: **yes** — this is the slice's whole definition of done.
-  - Whether to adopt a styling approach (CSS modules, a token layer, a utility framework) or
-    keep hand-written CSS. 49 inline `style={{}}` across 8 components is the status quo, and
-    it has no story for hover, focus, breakpoints or transitions — none of which an inline
-    style can express. Owner: user. Block: no.
+- **Unknowns:** resolved in `context/changes/visual-design-pass/` —
+  - Definition of done: **Tailwind v4 alone**, light mode only, no visual-regression pin.
+    The kit option was measured and dropped: every kit (Base UI, Radix, HeroUI, Ark) breaks
+    the same existing test by `aria-hidden`-ing the background behind a modal, and subtracts
+    focus guarantees that S-02 and S-05 reviews put in deliberately.
+  - Styling approach: Tailwind is purely additive here — there is not one `className` in
+    `src/` today, so no JSX structure has to move and the 91 tests are untouched.
 - **Risk:** The measured starting point, not an impression: the 109-line stylesheet is
   inherited from the Vite starter and still carries rules for elements this app does not have
   (`#social .button-icon`, `.counter`). Of its 16 design tokens, **five are defined and never
