@@ -354,10 +354,10 @@ the generated document says, never what the application enforces.
 
 #### Automated
 
-- [x] 2.1 Pest suite passes
-- [x] 2.2 test-plan.md §3 shows Phase 2 complete with its change folder
-- [x] 2.3 §6.6 records what shipped and names the structurally-only covered endpoints
+- [x] 2.1 Pest suite passes — 880c8b1
+- [x] 2.2 test-plan.md §3 shows Phase 2 complete with its change folder — 880c8b1
+- [x] 2.3 §6.6 records what shipped and names the structurally-only covered endpoints — 880c8b1
 
 #### Manual
 
-- [x] 2.4 §6.6 alone is enough to know what to do when adding an endpoint
+- [x] 2.4 §6.6 alone is enough to know what to do when adding an endpoint — 880c8b1
