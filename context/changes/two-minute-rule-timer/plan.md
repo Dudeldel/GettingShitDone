@@ -68,12 +68,12 @@ Next Actions — what it already was — and stays visible there, marked done.
 - `app/Services/ItemService.php` — emit it when the payload took the timer branch.
 
 **Automated verification**
-- [ ] `php artisan test` green
-- [ ] `./vendor/bin/phpstan analyse --memory-limit=512M` 0 errors
-- [ ] `./vendor/bin/pint --test` clean
+- [x] `php artisan test` green
+- [x] `./vendor/bin/phpstan analyse --memory-limit=512M` 0 errors
+- [x] `./vendor/bin/pint --test` clean
 
 **Manual**
-- [ ] A completed item reads back from `GET /api/items?bucket=next_actions` with `completedAt`.
+- [x] A completed item reads back from `GET /api/items?bucket=next_actions` with `completedAt`.
 
 ### Phase 2: The frontend — the question and the countdown
 
@@ -84,39 +84,62 @@ Next Actions — what it already was — and stays visible there, marked done.
 - `frontend/src/items/InboxList.tsx` — render a done marker for a completed item.
 
 **Automated verification**
-- [ ] `npm run test` green (timer tests on fake timers)
-- [ ] `npm run build` (includes `tsc -b`) clean
-- [ ] `npm run lint` clean
+- [x] `npm run test` green (timer tests on fake timers)
+- [x] `npm run build` (includes `tsc -b`) clean
+- [x] `npm run lint` clean
 
 **Manual**
-- [ ] Drive the timer in a real browser: countdown ticks, "Done" files the item, Escape backs out.
+- [x] Drive the timer in a real browser: countdown ticks, "Done" files the item, marker shows.
 
 ### Phase 3: Close out
 
 **Automated verification**
-- [ ] Full gates green both halves
-- [ ] Deliberate-breakage pass on the new tests (`lessons.md` rule)
+- [x] Full gates green both halves
+- [x] Deliberate-breakage pass on the new tests (`lessons.md` rule)
 
 ## Progress
 
 ### Phase 1: The backend — the branch, the state, the record
 #### Automated
-- [ ] 1.1 Domain: const, enum, outcome, decision, exception factories
-- [ ] 1.2 Edge + persistence: payload, request rules, migration, model, DTO, repository
-- [ ] 1.3 Record: LogEvent + service wiring
-- [ ] 1.4 Tests: unit branch matrix + feature clarify cases
+- [x] 1.1 Domain: const, enum, outcome, decision, exception factories — 027e882
+- [x] 1.2 Edge + persistence: payload, request rules, migration, model, DTO, repository — 027e882
+- [x] 1.3 Record: LogEvent + service wiring — 027e882
+- [x] 1.4 Tests: unit branch matrix + feature clarify cases — 027e882
 #### Manual
-- [ ] 1.5 Read a completed item back through the API
+- [x] 1.5 Read a completed item back through the API — completedAt set on the completed item, still null on one filed the other way
 
 ### Phase 2: The frontend — the question and the countdown
 #### Automated
-- [ ] 2.1 api.ts types
-- [ ] 2.2 ClarifyDialog: question + countdown + loop
-- [ ] 2.3 InboxList done marker
-- [ ] 2.4 Tests on fake timers
+- [x] 2.1 api.ts types — 350981a
+- [x] 2.2 ClarifyDialog: question + countdown + loop — 350981a
+- [x] 2.3 InboxList done marker — 350981a
+- [x] 2.4 Tests on fake timers — 350981a
 #### Manual
-- [ ] 2.5 Drive the timer in a real browser
+- [x] 2.5 Drive the timer in a real browser — clock ticked 1:57 → reset on "I need more time" → Done → "✓ Done" in Next Actions, absent on the item filed without a timer
 
 ### Phase 3: Close out
 #### Automated
-- [ ] 3.1 Full gates + deliberate breakage
+- [x] 3.1 Full gates + deliberate breakage — 0d6f624
+
+## Epilogue
+
+**Deliberate breakage: 24 mutations, 24 killed** (2 only after a fix).
+
+Backend 12/12. Two survived the first pass and were real:
+
+- Deleting the `missingTwoMinuteAnswer()` guard, and deleting the
+  `missingTwoMinuteOutcome()` guard, both left the suite green. Every gap in the tree
+  raises the same exception type, so with one guard gone the *delegable* guard further down
+  fired instead — same class, test still passes, question no longer asked. The feature tests
+  could not catch it either: the FormRequest still returns 422, so the domain hole is
+  invisible from the edge, which is exactly the independence the domain guard exists for.
+  Fixed by pinning both refusals to their message (0d6f624), after which both mutations die.
+
+Frontend 12/12 first pass, including: the clock set to 60 seconds, a countdown that never
+ticks, one that runs past zero, "more time" that does not restart the clock, a loop that is
+never counted, a deferral that reports as "no timer ran", a Back button that keeps a stale
+deferral, and a done marker rendered unconditionally.
+
+**Also fixed in passing:** backing out of the quick-route's delegation note landed the user
+on "can someone else do it?" — a tree question they never entered — and answering it filed
+the item somewhere they never chose. Shipped in S-02; found while extending `previousStep`.
