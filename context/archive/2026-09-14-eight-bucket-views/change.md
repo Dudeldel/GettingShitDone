@@ -1,10 +1,10 @@
 ---
 change_id: eight-bucket-views
 title: View all 8 GTD buckets, and empty the Trash
-status: impl_reviewed
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T12:14:47Z
 ---
 
 ## Notes
