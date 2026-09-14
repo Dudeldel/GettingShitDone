@@ -302,3 +302,20 @@ it('reports a failed attribute write and rethrows', function () {
             && $context['reason'] === 'HY000',
     );
 });
+
+it('routes the Calendar bucket to the derived view and every other bucket to the plain one', function () {
+    // The branch belongs in the service, not the controller: Calendar's membership is computed
+    // while every other bucket's is stored, and that is a domain fact. At the edge, a second
+    // caller — a job, the weekly review — asking for `calendar` would get only the filed half.
+    $repo = fakeItemRepository();
+    $service = new ItemService($repo, new ClarifyDecision);
+
+    $service->listByBucket(GtdBucket::Calendar);
+
+    expect($repo->calendarListed)->toBeTrue()
+        ->and($repo->listedBucket)->toBeNull();
+
+    $service->listByBucket(GtdBucket::NextActions);
+
+    expect($repo->listedBucket)->toBe(GtdBucket::NextActions);
+});

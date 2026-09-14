@@ -577,34 +577,34 @@ broken one.
 
 #### Automated
 
-- [x] 1.1 Pest suite passes
-- [x] 1.2 Larastan clean at level 6
-- [x] 1.3 Pint clean
-- [x] 1.4 Feature tests cover write, clear, Trash 422, 404, 401, and each invalid field shape
-- [x] 1.5 Unit tests cover TagListNormalizer, ItemAttributesPayload, ItemService::updateAttributes
-- [x] 1.6 CaptureItemTest client-injection test extended to tags, context and urgent
-- [x] 1.7 Deliberate breakage pass: Fillable, Trash guard, tag dedupe each redden
+- [x] 1.1 Pest suite passes — 7b17cb6
+- [x] 1.2 Larastan clean at level 6 — 7b17cb6
+- [x] 1.3 Pint clean — 7b17cb6
+- [x] 1.4 Feature tests cover write, clear, Trash 422, 404, 401, and each invalid field shape — 7b17cb6
+- [x] 1.5 Unit tests cover TagListNormalizer, ItemAttributesPayload, ItemService::updateAttributes — 7b17cb6
+- [x] 1.6 CaptureItemTest client-injection test extended to tags, context and urgent — 7b17cb6
+- [x] 1.7 Deliberate breakage pass: Fillable, Trash guard, tag dedupe each redden — 7b17cb6
 
 #### Manual
 
-- [x] 1.8 Attributes write returns populated item with bucket unchanged
-- [x] 1.9 All-null payload clears every field
-- [x] 1.10 Scramble export documents the new endpoint
+- [x] 1.8 Attributes write returns populated item with bucket unchanged — 7b17cb6
+- [x] 1.9 All-null payload clears every field — 7b17cb6
+- [x] 1.10 Scramble export documents the new endpoint — 7b17cb6
 
 ### Phase 2: The derived Calendar view
 
 #### Automated
 
-- [ ] 2.1 Pest suite passes
-- [ ] 2.2 Larastan clean at level 6; Pint clean
-- [ ] 2.3 Migration applies and rolls back
-- [ ] 2.4 Feature tests cover union membership, exclusions, completed inclusion and ordering
-- [ ] 2.5 Deliberate breakage pass: null-rank ordering and action-bucket clause each redden
+- [x] 2.1 Pest suite passes
+- [x] 2.2 Larastan clean at level 6; Pint clean
+- [x] 2.3 Migration applies and rolls back
+- [x] 2.4 Feature tests cover union membership, exclusions, completed inclusion and ordering
+- [x] 2.5 Deliberate breakage pass: null-rank ordering and action-bucket clause each redden
 
 #### Manual
 
-- [ ] 2.6 Dated Next Action appears in Calendar and remains in Next Actions
-- [ ] 2.7 Undated Calendar-filed item appears below the dated ones
+- [x] 2.6 Dated Next Action appears in Calendar and remains in Next Actions
+- [x] 2.7 Undated Calendar-filed item appears below the dated ones
 
 ### Phase 3: Rendering attributes and the Calendar view
 

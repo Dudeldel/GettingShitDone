@@ -29,6 +29,29 @@ interface ItemRepositoryInterface
     public function listByBucket(GtdBucket $bucket): Collection;
 
     /**
+     * The Calendar/Dates view (FR-011), which is DERIVED rather than stored.
+     *
+     * Separate from listByBucket() because it is not a bucket query at all, and giving it its
+     * own name keeps that visible: every other view in this interface answers "what is filed
+     * here", this one answers "what is on the calendar", and those are different questions.
+     *
+     * Two kinds of item qualify:
+     *   - anything filed to Calendar on purpose, dated or not — its membership is the answer;
+     *   - anything in an ACTION bucket carrying a due date — a commitment with a day attached.
+     *
+     * Action buckets only, so a dated Reference note or a dated item in the Trash does not
+     * surface as something to do. And an item appearing here does NOT make it a member of two
+     * buckets: its stored `bucket` is untouched, which is what keeps FR-008 literally true of
+     * the column while FR-011's "date-specific items appear in the Calendar/Dates bucket" is
+     * true of the view.
+     *
+     * Ordered dated-first by date, then newest-first like every other listing.
+     *
+     * @return Collection<int, ItemDto>
+     */
+    public function listCalendar(): Collection;
+
+    /**
      * Apply a clarification to one Inbox item: move it to its destination and record any
      * fields the branch implies. The first write path in this interface that MODIFIES an
      * existing row rather than creating one.

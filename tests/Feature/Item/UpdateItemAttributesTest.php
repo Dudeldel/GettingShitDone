@@ -50,7 +50,13 @@ it('leaves the bucket exactly where it was', function () {
         ->assertJsonPath('bucket', 'next_actions');
 
     expect(Item::query()->find($id)->bucket)->toBe(GtdBucket::NextActions);
-    test()->getJson('/api/items?bucket=calendar')->assertJsonCount(0);
+
+    // The stored column is the claim, not the absence of the item from Calendar: since the
+    // derived view landed, a dated Next Action appears there BY DESIGN while still being filed
+    // in Next Actions. That is the whole shape of FR-011 sitting alongside FR-008 — one stored
+    // bucket, two views that legitimately show it.
+    test()->getJson('/api/items?bucket=next_actions')->assertJsonPath('0.id', $id);
+    test()->getJson('/api/items?bucket=calendar')->assertJsonPath('0.id', $id);
 });
 
 it('clears every attribute when the payload is all nulls', function () {

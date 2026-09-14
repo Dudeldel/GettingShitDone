@@ -197,10 +197,22 @@ class ItemService
     }
 
     /**
+     * The items a bucket view shows (FR-009), with Calendar as the one derived case.
+     *
+     * The branch lives HERE rather than in the controller because it is a domain rule about
+     * what Calendar MEANS, not an HTTP concern: a date makes an item appear on the calendar
+     * without moving it, so Calendar's membership is computed while every other bucket's is
+     * stored. Putting it at the edge would let a second caller — a job, a command, the weekly
+     * review — ask for `calendar` and get only the hand-filed half.
+     *
+     * The HTTP contract is deliberately unchanged: this is still GET /api/items?bucket=calendar.
+     *
      * @return Collection<int, ItemDto>
      */
     public function listByBucket(GtdBucket $bucket): Collection
     {
-        return $this->items->listByBucket($bucket);
+        return $bucket === GtdBucket::Calendar
+            ? $this->items->listCalendar()
+            : $this->items->listByBucket($bucket);
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Monolog\Level;
 use Monolog\LogRecord;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Tests\TestCase;
 
 // Feature tests run against the application + a fresh in-memory DB per test.
@@ -71,6 +72,28 @@ function itemAttributes(mixed ...$named): array
 }
 
 /**
+ * Seed an item and, when a date is given, set it through the real attributes endpoint.
+ *
+ * Goes through HTTP rather than writing the column directly on purpose: the Calendar view's
+ * whole claim is that a date set the ordinary way surfaces the item, so a test that bypassed
+ * the write path would be proving something weaker than it reads.
+ *
+ * Lives here for the same reason seedItem() does — Pest loads every test into one process, so
+ * a file-scope helper becomes a fatal redeclaration the day a later slice reuses the name.
+ */
+function seedDatedItem(string $title, GtdBucket $bucket, ?string $dueDate): int
+{
+    $id = seedItem($title, $bucket);
+
+    if ($dueDate !== null) {
+        test()->postJson("/api/items/{$id}/attributes", itemAttributes(dueDate: $dueDate))
+            ->assertStatus(SymfonyResponse::HTTP_OK);
+    }
+
+    return $id;
+}
+
+/**
  * Hand-rolled fake repository recording what the service asked it for. No return type on
  * purpose: the tests read the recorder properties off the anonymous class.
  */
@@ -103,6 +126,8 @@ function fakeItemRepository(bool $failing = false)
         public ?int $attributedItemId = null;
 
         public ?ItemAttributesPayload $attributesWritten = null;
+
+        public bool $calendarListed = false;
 
         public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
         {
@@ -227,6 +252,13 @@ function fakeItemRepository(bool $failing = false)
         public function listByBucket(GtdBucket $bucket): Collection
         {
             $this->listedBucket = $bucket;
+
+            return new Collection;
+        }
+
+        public function listCalendar(): Collection
+        {
+            $this->calendarListed = true;
 
             return new Collection;
         }

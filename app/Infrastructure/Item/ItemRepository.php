@@ -13,6 +13,7 @@ use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
 use App\Models\Item;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 
@@ -222,6 +223,42 @@ class ItemRepository implements ItemRepositoryInterface
     {
         return Item::query()
             ->where('bucket', $bucket->value)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Item $item): ItemDto => $this->toDto($item))
+            ->values();
+    }
+
+    public function listCalendar(): Collection
+    {
+        // Derived from the domain rather than listed here, the same discipline RefileItemRequest
+        // uses: the enum is the single place that knows which buckets are commitments, so the
+        // view cannot drift from it.
+        $actionBuckets = array_map(
+            static fn (GtdBucket $bucket): string => $bucket->value,
+            array_filter(GtdBucket::cases(), static fn (GtdBucket $b): bool => $b->isActionBucket()),
+        );
+
+        return Item::query()
+            ->where(function (Builder $query) use ($actionBuckets): void {
+                // Filed to Calendar on purpose — dated or not, the filing IS the answer.
+                $query->where('bucket', GtdBucket::Calendar->value)
+                    // ...or an actionable commitment that carries a date. Action buckets only:
+                    // a dated Reference note is not something to do, and a dated item in the
+                    // Trash is on its way out.
+                    ->orWhere(function (Builder $dated) use ($actionBuckets): void {
+                        $dated->whereNotNull('due_date')->whereIn('bucket', $actionBuckets);
+                    });
+            })
+            // `due_date IS NULL` evaluates to 0/1 on both SQLite (tests) and MySQL (production),
+            // so ascending puts dated rows first. This line is load-bearing: BOTH engines sort
+            // NULL as the lowest value, so a plain orderBy('due_date') would open a date-ordered
+            // list with the items that have no date — above every real deadline. A NULLS LAST
+            // clause is not an option (MySQL has none; SQLite only since 3.30).
+            ->orderByRaw('due_date IS NULL')
+            ->orderBy('due_date')
+            // The existing tiebreak, so two items sharing a date still order deterministically.
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get()
