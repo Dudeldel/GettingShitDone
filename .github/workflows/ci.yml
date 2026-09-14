@@ -51,9 +51,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install & build
+      - name: Install, build & test
         working-directory: frontend
         run: |
           npm ci
           npm run lint
           npm run build
+          npm test

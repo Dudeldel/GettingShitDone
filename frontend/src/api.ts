@@ -53,7 +53,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       signal: options.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'TimeoutError') {
+    // Matched by name rather than `instanceof DOMException`, because the check has to
+    // survive a realm boundary: under jsdom the rejection originates in Node's realm while
+    // the DOMException global is jsdom's, so instanceof is false and this branch would
+    // never fire under test — the timeout path would ship unguarded. A spec TimeoutError
+    // always carries this name, so a browser behaves exactly as before.
+    if (err instanceof Error && err.name === 'TimeoutError') {
       throw new ApiError(TIMEOUT_STATUS, 'The server did not respond in time.')
     }
     throw err

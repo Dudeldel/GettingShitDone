@@ -614,30 +614,30 @@ behaviour and its own tests go with it.
 
 #### Automated
 
-- [x] 1.1 Item feature tests pass: `php artisan test tests/Feature/Item`
-- [x] 1.2 Full backend suite passes: `php artisan test`
-- [x] 1.3 Larastan level 6 clean
-- [x] 1.4 Pint clean
-- [x] 1.5 Durability test proven able to fail by deliberate breakage
+- [x] 1.1 Item feature tests pass: `php artisan test tests/Feature/Item` — 5d6341f
+- [x] 1.2 Full backend suite passes: `php artisan test` — 5d6341f
+- [x] 1.3 Larastan level 6 clean — 5d6341f
+- [x] 1.4 Pint clean — 5d6341f
+- [x] 1.5 Durability test proven able to fail by deliberate breakage — 5d6341f
 
 #### Manual
 
-- [x] 1.6 Failure test exercises the real repository, not a mock
+- [x] 1.6 Failure test exercises the real repository, not a mock — 5d6341f
 
 ### Phase 2: Frontend test harness
 
 #### Automated
 
-- [ ] 2.1 Frontend tests pass: `cd frontend && npm test`
-- [ ] 2.2 Frontend build passes incl. `tsc -b` over test files
-- [ ] 2.3 Frontend lint passes with no new config
-- [ ] 2.4 Backend suite still green
-- [ ] 2.5 An unhandled request fails the run
+- [x] 2.1 Frontend tests pass: `cd frontend && npm test`
+- [x] 2.2 Frontend build passes incl. `tsc -b` over test files
+- [x] 2.3 Frontend lint passes with no new config
+- [x] 2.4 Backend suite still green
+- [x] 2.5 An unhandled request fails the run
 
 #### Manual
 
-- [ ] 2.6 `AbortSignal.timeout` probe outcome recorded and Phase 3 approach chosen
-- [ ] 2.7 `npm test` works in a clean clone after `npm ci`
+- [x] 2.6 `AbortSignal.timeout` probe outcome recorded and Phase 3 approach chosen
+- [x] 2.7 `npm test` works in a clean clone after `npm ci`
 
 ### Phase 3: Capture error surfacing and the 401 explanation
 
