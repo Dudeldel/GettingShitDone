@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import { emptyTrash, type Item, listItems } from '../api'
+import { completeItem, type Destination, emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
 import { BucketNav } from './BucketNav'
-import { bucketLabel, isGtdBucket } from './buckets'
+import { bucketLabel, isActionBucket, isGtdBucket } from './buckets'
 import { InboxList } from './InboxList'
+import { RefileDialog } from './RefileDialog'
 
 /**
  * One screen for any of the seven non-Inbox buckets, reached by URL.
  *
- * Read-only apart from the Trash purge: you do not clarify from a destination, because
- * re-filing an already-bucketed item is FR-010 and parked for v2. That is why InboxList is
- * rendered WITHOUT onClarify here.
+ * You do not CLARIFY from a destination — clarify is Inbox-only and stays that way, which is
+ * why InboxList is rendered without onClarify here. Re-filing and completing are different
+ * verbs with their own endpoints, and those this screen does offer.
  */
 export function BucketPage() {
   const { bucket } = useParams()
@@ -22,6 +23,10 @@ export function BucketPage() {
   const [confirming, setConfirming] = useState(false)
   const [purging, setPurging] = useState(false)
   const [discarded, setDiscarded] = useState<number | null>(null)
+  const [refiling, setRefiling] = useState<Item | null>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
+  const [actionStatus, setActionStatus] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
 
   const valid = isGtdBucket(bucket)
@@ -62,6 +67,48 @@ export function BucketPage() {
     }
   }, [confirming])
 
+  const handleComplete = useCallback(
+    async (item: Item, next: boolean) => {
+      setActionError(null)
+      const before = item.completedAt
+      // Optimistic: a checkbox that waits for a round trip feels broken. The rollback below
+      // is what keeps that honest — a failed write must not leave the box ticked.
+      setItems((current) =>
+        current.map((i) =>
+          i.id === item.id ? { ...i, completedAt: next ? new Date().toISOString() : null } : i,
+        ),
+      )
+      try {
+        const updated = await completeItem(item.id, next)
+        setItems((current) => current.map((i) => (i.id === item.id ? updated : i)))
+        // S-03 kept completed items visible because "vanishing is indistinguishable from
+        // being lost". They are hidden by default now, so saying where the item went is the
+        // compensation for that reversal, not decoration.
+        setActionStatus(
+          next
+            ? `Marked "${item.title}" done.${showCompleted ? '' : ' Turn on Show completed to see it.'}`
+            : `"${item.title}" is no longer marked done.`,
+        )
+      } catch (err) {
+        setItems((current) =>
+          current.map((i) => (i.id === item.id ? { ...i, completedAt: before } : i)),
+        )
+        setActionStatus(null)
+        setActionError(messageFor(err))
+      }
+    },
+    [showCompleted],
+  )
+
+  const handleRefiled = useCallback((moved: Item, destination: Destination) => {
+    // It belongs to another list now, so it leaves this one — and the status line is what
+    // stops that reading as "it disappeared".
+    setItems((current) => current.filter((i) => i.id !== moved.id))
+    setRefiling(null)
+    setActionError(null)
+    setActionStatus(`Moved "${moved.title}" to ${bucketLabel(destination)}.`)
+  }, [])
+
   const purge = useCallback(async () => {
     setPurgeError(null)
     setPurging(true)
@@ -88,6 +135,14 @@ export function BucketPage() {
     return <Navigate to="/" replace />
   }
 
+  const canComplete = isActionBucket(bucket)
+  // Completed items are out of the default view; the count keeps the empty state honest, so
+  // "nothing here" never gets said about a list that only looks empty.
+  const hiddenCount = canComplete && !showCompleted
+    ? items.filter((item) => item.completedAt !== null).length
+    : 0
+  const visible = hiddenCount > 0 ? items.filter((item) => item.completedAt === null) : items
+
   return (
     <main className="mx-auto max-w-2xl px-4 pt-6 pb-10">
       <h1 className="mb-2">{bucketLabel(bucket)}</h1>
@@ -97,9 +152,53 @@ export function BucketPage() {
         <p className="text-sm text-danger">Could not load this bucket: {loadError}</p>
       )}
       {loadError === null && loading && <p className="text-sm text-muted">Loading…</p>}
-      {loadError === null && !loading && (
-        <InboxList items={items} emptyMessage={`Nothing in ${bucketLabel(bucket)}.`} />
+
+      {/* Offered only where completing is possible, so the control never implies a state the
+          bucket cannot hold. */}
+      {loadError === null && !loading && canComplete && (
+        <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            className="size-4 accent-accent"
+            checked={showCompleted}
+            onChange={(e) => setShowCompleted(e.target.checked)}
+          />
+          Show completed
+        </label>
       )}
+
+      {refiling !== null && (
+        <RefileDialog
+          item={refiling}
+          currentBucket={bucket}
+          onRefiled={handleRefiled}
+          onCancel={() => setRefiling(null)}
+        />
+      )}
+
+      {loadError === null && !loading && (
+        <InboxList
+          items={visible}
+          onComplete={canComplete ? handleComplete : undefined}
+          onRefile={setRefiling}
+          emptyMessage={
+            hiddenCount > 0
+              ? `Nothing left in ${bucketLabel(bucket)} — ${hiddenCount} completed and hidden.`
+              : `Nothing in ${bucketLabel(bucket)}.`
+          }
+        />
+      )}
+
+      {/* Labelled, because this screen already carries two other live regions and an
+          unnamed third would leave every lookup matching on message text. */}
+      <div className="live-line mt-3">
+        <p role="status" aria-label="Item action status" className="text-muted">
+          {actionStatus ?? ''}
+        </p>
+        <p role="alert" aria-label="Item action error" className="text-danger">
+          {actionError ?? ''}
+        </p>
+      </div>
 
       {/* The purge lives HERE and only here. A delete affordance on every bucket would be a
           generic remove verb, which is exactly what this slice is shaped to avoid. */}

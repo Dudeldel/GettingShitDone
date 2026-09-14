@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -284,7 +284,12 @@ describe('the Delegation view (FR-007)', () => {
 })
 
 describe('a completed item in Next Actions (FR-006)', () => {
-  it('is listed in its bucket, marked done', async () => {
+  it('is out of the default view but still in its bucket, marked done', async () => {
+    // S-03 kept completed items visible, reasoning that vanishing is indistinguishable from
+    // being lost. This slice hides them by default instead — so what is asserted here is BOTH
+    // halves of that reversal: they are gone from the default view, the empty state says so
+    // rather than claiming the bucket is empty, and turning the toggle on brings them back
+    // exactly where they were filed. "Done is state, not a ninth bucket" still holds.
     listOnlyFor('next_actions', [
       makeItem({
         id: 1,
@@ -294,11 +299,196 @@ describe('a completed item in Next Actions (FR-006)', () => {
       }),
     ])
 
-    renderBucket('/bucket/next_actions')
+    const { user } = renderBucket('/bucket/next_actions')
 
-    // The decision this slice recorded, asserted end to end: done is state, not a ninth
-    // bucket. The item stays where it was filed and says it is finished.
-    expect(await screen.findByText('reply to the landlord')).toBeInTheDocument()
+    expect(await screen.findByText(/1 completed and hidden/i)).toBeInTheDocument()
+    expect(screen.queryByText('reply to the landlord')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /show completed/i }))
+
+    expect(screen.getByText('reply to the landlord')).toBeInTheDocument()
     expect(screen.getByText('✓ Done')).toBeInTheDocument()
+  })
+
+  it('never claims the bucket is empty when it only looks empty', async () => {
+    // The distinction S-05 already fought for on the load-error path: a list that is hiding
+    // things and a list that has nothing must not read the same.
+    listOnlyFor('projects', [
+      makeItem({ id: 1, title: 'zaplanować urlop', bucket: 'projects', completedAt: '2026-09-14T10:05:00+00:00' }),
+    ])
+
+    renderBucket('/bucket/projects')
+
+    expect(await screen.findByText(/1 completed and hidden/i)).toBeInTheDocument()
+    expect(screen.queryByText('Nothing in Projects.')).not.toBeInTheDocument()
+  })
+})
+
+describe('marking an item done from its bucket', () => {
+  it('ticks the box, tells the user where it went, and persists', async () => {
+    const sent: Array<Record<string, unknown>> = []
+    listOnlyFor('next_actions', [makeItem({ id: 1, title: 'oddzwonić do Marka', bucket: 'next_actions' })])
+    server.use(
+      http.post('*/api/items/:id/complete', async ({ request }) => {
+        sent.push((await request.json()) as Record<string, unknown>)
+
+        return HttpResponse.json(
+          makeItem({ id: 1, title: 'oddzwonić do Marka', bucket: 'next_actions', completedAt: '2026-09-14T12:00:00+00:00' }),
+        )
+      }),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await screen.findByText('oddzwonić do Marka')
+
+    await user.click(screen.getByRole('checkbox', { name: /mark "oddzwonić do marka" done/i }))
+
+    // The compensation for hiding completed items: the row leaves the default view, so the
+    // screen has to say so. Vanishing silently is what S-03 refused, and hiding without a
+    // word would be the same thing wearing a toggle.
+    expect(await screen.findByRole('status', { name: /item action status/i })).toHaveTextContent(
+      /marked "oddzwonić do marka" done.*show completed/i,
+    )
+    expect(sent[0]).toEqual({ completed: true })
+  })
+
+  it('un-ticks it again', async () => {
+    const sent: Array<Record<string, unknown>> = []
+    listOnlyFor('next_actions', [
+      makeItem({ id: 1, title: 'oddzwonić', bucket: 'next_actions', completedAt: '2026-09-14T12:00:00+00:00' }),
+    ])
+    server.use(
+      http.post('*/api/items/:id/complete', async ({ request }) => {
+        sent.push((await request.json()) as Record<string, unknown>)
+
+        return HttpResponse.json(makeItem({ id: 1, title: 'oddzwonić', bucket: 'next_actions' }))
+      }),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await user.click(await screen.findByRole('checkbox', { name: /show completed/i }))
+    await user.click(screen.getByRole('checkbox', { name: /mark "oddzwonić" done/i }))
+
+    expect(sent[0]).toEqual({ completed: false })
+    expect(await screen.findByRole('status', { name: /item action status/i })).toHaveTextContent(
+      /no longer marked done/i,
+    )
+  })
+
+  it('puts the tick back when the write fails', async () => {
+    // A box that stays ticked after a failed write is a lie about persisted state — and the
+    // optimistic update is what makes that failure mode possible in the first place.
+    listOnlyFor('next_actions', [makeItem({ id: 1, title: 'oddzwonić', bucket: 'next_actions' })])
+    server.use(
+      http.post('*/api/items/:id/complete', () =>
+        HttpResponse.json({ message: 'The item could not be saved. Please try again.' }, { status: 500 }),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await screen.findByText('oddzwonić')
+
+    await user.click(screen.getByRole('checkbox', { name: /mark "oddzwonić" done/i }))
+
+    expect(await screen.findByRole('alert', { name: /item action error/i })).toHaveTextContent(
+      /could not be saved/i,
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: /mark "oddzwonić" done/i })).not.toBeChecked(),
+    )
+  })
+
+  it('is not offered where done would mean nothing', async () => {
+    // FR-004 split actionable from not. The backend refuses these with a 422 anyway, so a
+    // checkbox here would be a control guaranteed to fail.
+    for (const bucket of ['reference', 'someday_maybe', 'trash'] as const) {
+      listOnlyFor(bucket, [makeItem({ id: 1, title: 'nie-zobowiązanie', bucket })])
+      const { unmount } = renderBucket(`/bucket/${bucket}`)
+      await screen.findByText('nie-zobowiązanie')
+
+      expect(screen.queryByRole('checkbox', { name: /done/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('checkbox', { name: /show completed/i })).not.toBeInTheDocument()
+      unmount()
+    }
+  })
+})
+
+describe('moving an item to another bucket', () => {
+  it('offers every destination except the Inbox and the one it is already in', async () => {
+    listOnlyFor('someday_maybe', [makeItem({ id: 1, title: 'kurs hiszpańskiego', bucket: 'someday_maybe' })])
+
+    const { user } = renderBucket('/bucket/someday_maybe')
+    await screen.findByText('kurs hiszpańskiego')
+
+    await user.click(screen.getByRole('button', { name: /move "kurs hiszpańskiego"/i }))
+
+    const dialog = await screen.findByRole('dialog')
+    // Items arrive in the Inbox; they are not filed there. And offering the bucket you are
+    // already looking at is an action that does nothing.
+    expect(within(dialog).queryByRole('button', { name: /^inbox$/i })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: /^someday \/ maybe$/i })).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Next Actions' })).toBeInTheDocument()
+  })
+
+  it('moves it, drops it from this list, and says where it went', async () => {
+    const sent: Array<Record<string, unknown>> = []
+    listOnlyFor('someday_maybe', [makeItem({ id: 1, title: 'kurs hiszpańskiego', bucket: 'someday_maybe' })])
+    server.use(
+      http.post('*/api/items/:id/refile', async ({ request }) => {
+        sent.push((await request.json()) as Record<string, unknown>)
+
+        return HttpResponse.json(makeItem({ id: 1, title: 'kurs hiszpańskiego', bucket: 'next_actions' }))
+      }),
+    )
+
+    const { user } = renderBucket('/bucket/someday_maybe')
+    await screen.findByText('kurs hiszpańskiego')
+    await user.click(screen.getByRole('button', { name: /move "kurs hiszpańskiego"/i }))
+    await user.click(await screen.findByRole('button', { name: 'Next Actions' }))
+
+    expect(sent[0]).toEqual({ bucket: 'next_actions' })
+    await waitFor(() =>
+      expect(screen.queryByText('kurs hiszpańskiego')).not.toBeInTheDocument(),
+    )
+    // It belongs to another list now. Without this line that is indistinguishable from the
+    // item having been destroyed.
+    expect(screen.getByRole('status', { name: /item action status/i })).toHaveTextContent(
+      /moved "kurs hiszpańskiego" to next actions/i,
+    )
+  })
+
+  it('keeps the item here and explains itself when the move fails', async () => {
+    listOnlyFor('reference', [makeItem({ id: 1, title: 'artykuł', bucket: 'reference' })])
+    server.use(
+      http.post('*/api/items/:id/refile', () =>
+        HttpResponse.json({ message: 'That item is still in the Inbox.' }, { status: 422 }),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/reference')
+    await screen.findByText('artykuł')
+    await user.click(screen.getByRole('button', { name: /move "artykuł"/i }))
+    await user.click(await screen.findByRole('button', { name: 'Trash' }))
+
+    expect(await screen.findByRole('alert', { name: /move error/i })).toHaveTextContent(
+      /still in the inbox/i,
+    )
+    expect(screen.getByText('artykuł')).toBeInTheDocument()
+  })
+
+  it('can take an item back out of the Trash, because only emptying it is final', async () => {
+    listOnlyFor('trash', [makeItem({ id: 1, title: 'stary newsletter', bucket: 'trash' })])
+    server.use(
+      http.post('*/api/items/:id/refile', () =>
+        HttpResponse.json(makeItem({ id: 1, title: 'stary newsletter', bucket: 'reference' })),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/trash')
+    await screen.findByText('stary newsletter')
+    await user.click(screen.getByRole('button', { name: /move "stary newsletter"/i }))
+    await user.click(await screen.findByRole('button', { name: 'Reference' }))
+
+    await waitFor(() => expect(screen.queryByText('stary newsletter')).not.toBeInTheDocument())
   })
 })

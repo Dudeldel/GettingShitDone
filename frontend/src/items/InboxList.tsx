@@ -9,11 +9,20 @@ function capturedAt(iso: string): string {
 export function InboxList({
   items,
   onClarify,
+  onComplete,
+  onRefile,
   emptyMessage = 'Your Inbox is empty. Type an idea above to capture it.',
 }: {
   items: Item[]
-  /** Omitted by callers that only display items — bucket views (S-05) will not clarify. */
+  /** Omitted by callers that only display items — the Inbox is the only screen that clarifies. */
   onClarify?: (item: Item) => void
+  /**
+   * Passed only where completion means something — the four action buckets. Omitted
+   * elsewhere, so the checkbox is absent rather than present-and-doomed-to-422.
+   */
+  onComplete?: (item: Item, next: boolean) => void
+  /** Passed by the bucket views; the Inbox clarifies instead of re-filing. */
+  onRefile?: (item: Item) => void
   /**
    * Overridden by the bucket views. The default names the Inbox because this list started
    * as the Inbox's, and a Trash view announcing "Your Inbox is empty" is simply wrong about
@@ -33,8 +42,20 @@ export function InboxList({
     // loses its list semantics in Safari + VoiceOver unless the role is restored.
     <ul role="list" className="mt-2 space-y-2">
       {items.map((item) => (
-        <li key={item.id} className="card flex items-start justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
+        <li key={item.id} className="card flex items-start gap-3 px-4 py-3">
+          {/* A native checkbox rather than a button: done is a STATE, so this gets the
+              keyboard contract and the checked/unchecked announcement for free instead of
+              an aria-pressed someone has to remember to maintain. */}
+          {onComplete !== undefined && (
+            <input
+              type="checkbox"
+              className="mt-1 size-4 shrink-0 accent-accent"
+              checked={item.completedAt !== null}
+              aria-label={`Mark "${item.title}" done`}
+              onChange={(e) => onComplete(item, e.target.checked)}
+            />
+          )}
+          <div className="min-w-0 grow">
             <div className="text-ink">
               {item.title}
               {/* FR-006: an item done inside the two-minute timer stays in Next Actions
@@ -60,6 +81,16 @@ export function InboxList({
           {onClarify !== undefined && (
             <button type="button" className="btn btn-quiet shrink-0" onClick={() => onClarify(item)}>
               Clarify
+            </button>
+          )}
+          {onRefile !== undefined && (
+            <button
+              type="button"
+              className="btn btn-quiet shrink-0"
+              aria-label={`Move "${item.title}" to another bucket`}
+              onClick={() => onRefile(item)}
+            >
+              Move
             </button>
           )}
         </li>

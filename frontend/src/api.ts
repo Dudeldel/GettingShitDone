@@ -214,6 +214,9 @@ export function captureItem(title: string, note?: string): Promise<Item> {
   })
 }
 
+/** Every bucket an item can be filed INTO. The Inbox is where capture arrives, not a target. */
+export type Destination = Exclude<GtdBucket, 'inbox'>
+
 /** The three destinations FR-004 offers for a non-actionable item. */
 export type NonActionableDestination = Extract<
   GtdBucket,
@@ -272,6 +275,31 @@ export function clarifyItem(id: number, answers: ClarifyAnswers): Promise<Item> 
   return request<Item>(`/api/items/${id}/clarify`, {
     method: 'POST',
     body: JSON.stringify(answers),
+  })
+}
+
+/**
+ * Move an already-clarified item to a different destination (FR-010).
+ *
+ * A destination is named here, unlike clarify where the server derives it — that is the
+ * difference between the two operations, not an inconsistency. The Inbox is not among the
+ * legal values; the backend refuses it with a 422.
+ */
+export function refileItem(id: number, bucket: Destination): Promise<Item> {
+  return request<Item>(`/api/items/${id}/refile`, {
+    method: 'POST',
+    body: JSON.stringify({ bucket }),
+  })
+}
+
+/**
+ * Mark an item done, or un-mark it. A toggle, not two endpoints: the product has exactly one
+ * irreversible operation and it is guarded by a confirmation.
+ */
+export function completeItem(id: number, completed: boolean): Promise<Item> {
+  return request<Item>(`/api/items/${id}/complete`, {
+    method: 'POST',
+    body: JSON.stringify({ completed }),
   })
 }
 

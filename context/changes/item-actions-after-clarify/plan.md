@@ -345,33 +345,33 @@ that anything reads: the column holds `false` or `null` and has never had a writ
 
 #### Automated
 
-- [x] 1.1 Migration applies and rolls back
-- [x] 1.2 Backend tests pass
-- [x] 1.3 Static analysis passes
-- [x] 1.4 Format check passes
-- [x] 1.5 A refile carries an existing completion across, read back separately
-- [x] 1.6 A complete leaves the bucket untouched, read back separately
-- [x] 1.7 Refiling to the Inbox and completing in a non-action bucket are both refused
+- [x] 1.1 Migration applies and rolls back — 71b8372
+- [x] 1.2 Backend tests pass — 71b8372
+- [x] 1.3 Static analysis passes — 71b8372
+- [x] 1.4 Format check passes — 71b8372
+- [x] 1.5 A refile carries an existing completion across, read back separately — 71b8372
+- [x] 1.6 A complete leaves the bucket untouched, read back separately — 71b8372
+- [x] 1.7 Refiling to the Inbox and completing in a non-action bucket are both refused — 71b8372
 
 #### Manual
 
-- [x] 1.8 Drive both verbs against the running API and read each item back
+- [x] 1.8 Drive both verbs against the running API and read each item back — 71b8372
 
 ### Phase 2: Per-row actions in the bucket views
 
 #### Automated
 
-- [ ] 2.1 Frontend tests pass
-- [ ] 2.2 Build and types pass
-- [ ] 2.3 Lint passes
-- [ ] 2.4 A completed item leaves the default view and returns under "show completed"
-- [ ] 2.5 A failed refile leaves the row in place and explains itself
+- [x] 2.1 Frontend tests pass
+- [x] 2.2 Build and types pass
+- [x] 2.3 Lint passes
+- [x] 2.4 A completed item leaves the default view and returns under "show completed"
+- [x] 2.5 A failed refile leaves the row in place and explains itself
 
 #### Manual
 
-- [ ] 2.6 Walk an action bucket: check, read the status message, toggle, uncheck
-- [ ] 2.7 Move an item out of Trash into a chosen bucket
-- [ ] 2.8 No bucket offers Clarify; the Inbox is absent from every destination picker
+- [x] 2.6 Walk an action bucket: check, read the status message, toggle, uncheck
+- [x] 2.7 Move an item out of Trash into a chosen bucket
+- [x] 2.8 No bucket offers Clarify; the Inbox is absent from every destination picker
 
 ### Phase 3: Close out
 

@@ -1,4 +1,4 @@
-import type { GtdBucket } from '../api'
+import type { Destination, GtdBucket } from '../api'
 
 /**
  * The eight GTD lists, in the order the workflow moves through them.
@@ -27,3 +27,22 @@ export function bucketLabel(bucket: GtdBucket): string {
 export function isGtdBucket(value: string | undefined): value is GtdBucket {
   return value !== undefined && value in LABELS
 }
+
+/**
+ * Mirrors GtdBucket::isActionBucket() on the backend, which is the authority — the server
+ * refuses a completion outside these four with a 422 regardless of what this says. The copy
+ * exists so the UI does not offer a control that is guaranteed to fail.
+ */
+const ACTION_BUCKETS: ReadonlySet<GtdBucket> = new Set<GtdBucket>([
+  'next_actions',
+  'projects',
+  'calendar',
+  'delegation',
+])
+
+export function isActionBucket(bucket: GtdBucket): boolean {
+  return ACTION_BUCKETS.has(bucket)
+}
+
+/** The seven legal re-file targets — every bucket but the Inbox. */
+export const DESTINATIONS = BUCKETS.filter((bucket) => bucket !== 'inbox') as Destination[]
