@@ -93,7 +93,8 @@ describe('the eight bucket views (FR-009)', () => {
   })
 
   it('never offers a Clarify action from a destination', async () => {
-    // Re-filing an already-bucketed item is FR-010, parked for v2.
+    // Clarify stays Inbox-only; re-filing a bucketed item has its own verb and its own
+    // button. This asserts the boundary, not the absence of any action.
     listOnlyFor('next_actions', [makeItem({ id: 1, title: 'already routed', bucket: 'next_actions' })])
 
     renderBucket('/bucket/next_actions')
@@ -474,6 +475,72 @@ describe('moving an item to another bucket', () => {
       /still in the inbox/i,
     )
     expect(screen.getByText('artykuł')).toBeInTheDocument()
+  })
+
+  it('hands focus back to the row it came from when the picker is dismissed', async () => {
+    // Found by walking the app, not by a test: Escape closed the panel and left focus on
+    // <body>, so a keyboard user was dropped at the top of the document and had to tab
+    // through the entire list to get back to the row they were standing on.
+    listOnlyFor('reference', [makeItem({ id: 1, title: 'artykuł', bucket: 'reference' })])
+
+    const { user } = renderBucket('/bucket/reference')
+    await screen.findByText('artykuł')
+    const trigger = screen.getByRole('button', { name: /move "artykuł"/i })
+    await user.click(trigger)
+    await screen.findByRole('dialog')
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+  })
+
+  it('falls back to the heading when the row vanishes while its picker is open', async () => {
+    // Reachable: the list stays live behind the picker, so checking the row done filters it
+    // out of the default view and detaches the button that opened the panel. Focusing a
+    // detached node puts focus back on <body> — the very thing this is here to prevent.
+    listOnlyFor('next_actions', [makeItem({ id: 1, title: 'babababa', bucket: 'next_actions' })])
+    server.use(
+      http.post('*/api/items/:id/complete', () =>
+        HttpResponse.json(makeItem({
+          id: 1, title: 'babababa', bucket: 'next_actions', completedAt: '2026-09-14T10:00:00+00:00',
+        })),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await screen.findByText('babababa')
+    const trigger = screen.getByRole('button', { name: /move "babababa"/i })
+    await user.click(trigger)
+    await screen.findByRole('dialog')
+
+    await user.click(screen.getByRole('checkbox', { name: /mark "babababa" done/i }))
+    await waitFor(() => expect(trigger.isConnected).toBe(false))
+
+    // Cancel rather than Escape: the row took focus with it when it unmounted, so a keypress
+    // no longer lands inside the panel. The button is what is still reachable from here.
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /cancel/i }))
+
+    expect(screen.getByRole('heading', { name: 'Next Actions', level: 1 })).toHaveFocus()
+  })
+
+  it('moves focus to the heading when the item it was moving leaves the list', async () => {
+    // The trigger unmounts with its row, so there is nothing to restore to. Focus must still
+    // land somewhere that names where the user is, rather than on <body>.
+    listOnlyFor('reference', [makeItem({ id: 1, title: 'artykuł', bucket: 'reference' })])
+    server.use(
+      http.post('*/api/items/:id/refile', () =>
+        HttpResponse.json(makeItem({ id: 1, title: 'artykuł', bucket: 'trash' })),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/reference')
+    await screen.findByText('artykuł')
+    await user.click(screen.getByRole('button', { name: /move "artykuł"/i }))
+    await user.click(await screen.findByRole('button', { name: 'Trash' }))
+
+    await waitFor(() => expect(screen.queryByText('artykuł')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Reference', level: 1 })).toHaveFocus()
   })
 
   it('can take an item back out of the Trash, because only emptying it is final', async () => {

@@ -361,26 +361,26 @@ that anything reads: the column holds `false` or `null` and has never had a writ
 
 #### Automated
 
-- [x] 2.1 Frontend tests pass
-- [x] 2.2 Build and types pass
-- [x] 2.3 Lint passes
-- [x] 2.4 A completed item leaves the default view and returns under "show completed"
-- [x] 2.5 A failed refile leaves the row in place and explains itself
+- [x] 2.1 Frontend tests pass — 1c12558
+- [x] 2.2 Build and types pass — 1c12558
+- [x] 2.3 Lint passes — 1c12558
+- [x] 2.4 A completed item leaves the default view and returns under "show completed" — 1c12558
+- [x] 2.5 A failed refile leaves the row in place and explains itself — 1c12558
 
 #### Manual
 
-- [x] 2.6 Walk an action bucket: check, read the status message, toggle, uncheck
-- [x] 2.7 Move an item out of Trash into a chosen bucket
-- [x] 2.8 No bucket offers Clarify; the Inbox is absent from every destination picker
+- [x] 2.6 Walk an action bucket: check, read the status message, toggle, uncheck — 1c12558
+- [x] 2.7 Move an item out of Trash into a chosen bucket — 1c12558
+- [x] 2.8 No bucket offers Clarify; the Inbox is absent from every destination picker — 1c12558
 
 ### Phase 3: Close out
 
 #### Automated
 
-- [ ] 3.1 All six gates green
-- [ ] 3.2 No comment still describes FR-010 as parked
-- [ ] 3.3 Deliberate-breakage pass, including refile-preserves-completion and complete-preserves-bucket
+- [x] 3.1 All six gates green — 01710e3
+- [x] 3.2 No comment still describes FR-010 as parked — 01710e3
+- [x] 3.3 Deliberate-breakage pass, including refile-preserves-completion and complete-preserves-bucket — 01710e3
 
 #### Manual
 
-- [ ] 3.4 Full walk across the four action buckets and all seven destinations, at 1280px and 400px
+- [x] 3.4 Full walk across the four action buckets and all seven destinations, at 1280px and 400px — 01710e3

@@ -37,7 +37,8 @@ interface ItemRepositoryInterface
      * failure FR-008 exists to prevent.
      *
      * @throws ItemNotFoundException no item with this id
-     * @throws ItemNotInInboxException the item has already been clarified (FR-010 is v2)
+     * @throws ItemNotInInboxException the item has already been clarified; moving it is
+     *                                 refile()'s job, not a second clarify
      * @throws ItemPersistenceException the write itself failed
      */
     public function clarify(int $itemId, ClarifyOutcome $outcome): ItemDto;

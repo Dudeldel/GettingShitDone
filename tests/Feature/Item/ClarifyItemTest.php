@@ -117,7 +117,8 @@ it('refuses to clarify an item that has already been clarified', function () {
     test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'reference'])
         ->assertStatus(Response::HTTP_OK);
 
-    // 409, not 404: the item exists, the door is closed. Re-filing is FR-010, deferred to v2.
+    // 409, not 404: the item exists, the door is closed. Re-filing it is /refile's job —
+    // clarify is Inbox-only, which is what makes its guard unraceable.
     test()->postJson("/api/items/{$id}/clarify", ['quickRouteBucket' => 'trash'])
         ->assertStatus(Response::HTTP_CONFLICT)
         ->assertJsonPath('message', 'That item has already been clarified.');

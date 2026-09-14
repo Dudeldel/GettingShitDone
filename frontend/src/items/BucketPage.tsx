@@ -25,6 +25,9 @@ export function BucketPage() {
   const [discarded, setDiscarded] = useState<number | null>(null)
   const [refiling, setRefiling] = useState<Item | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  /** The control that opened the picker, so dismissing it can hand focus back. */
+  const refileTrigger = useRef<HTMLElement | null>(null)
   const [actionStatus, setActionStatus] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
@@ -100,13 +103,43 @@ export function BucketPage() {
     [showCompleted],
   )
 
+  /**
+   * Opening and closing the picker have to move focus deliberately, because the picker is a
+   * panel the keyboard can otherwise fall out of: dismissing it left focus on <body>, which
+   * drops the user at the top of the document and makes them tab back through the whole list
+   * to reach the row they started from.
+   */
+  const openRefile = useCallback((item: Item) => {
+    refileTrigger.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    setRefiling(item)
+  }, [])
+
+  const cancelRefile = useCallback(() => {
+    setRefiling(null)
+    const trigger = refileTrigger.current
+    refileTrigger.current = null
+    // isConnected, because the row can disappear while the picker is open (a completion
+    // filtered it out). Focusing a detached node silently lands on <body> again.
+    if (trigger !== null && trigger.isConnected) {
+      trigger.focus()
+    } else {
+      headingRef.current?.focus()
+    }
+  }, [])
+
   const handleRefiled = useCallback((moved: Item, destination: Destination) => {
     // It belongs to another list now, so it leaves this one — and the status line is what
     // stops that reading as "it disappeared".
     setItems((current) => current.filter((i) => i.id !== moved.id))
     setRefiling(null)
+    refileTrigger.current = null
     setActionError(null)
     setActionStatus(`Moved "${moved.title}" to ${bucketLabel(destination)}.`)
+    // The row that opened the picker has just left the list, so there is no trigger to go
+    // back to. The heading is the nearest thing that still names where the user is.
+    headingRef.current?.focus()
   }, [])
 
   const purge = useCallback(async () => {
@@ -145,7 +178,9 @@ export function BucketPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-6 pb-10">
-      <h1 className="mb-2">{bucketLabel(bucket)}</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="mb-2">
+        {bucketLabel(bucket)}
+      </h1>
       <BucketNav current={bucket} />
 
       {loadError !== null && (
@@ -172,7 +207,7 @@ export function BucketPage() {
           item={refiling}
           currentBucket={bucket}
           onRefiled={handleRefiled}
-          onCancel={() => setRefiling(null)}
+          onCancel={cancelRefile}
         />
       )}
 
@@ -180,7 +215,7 @@ export function BucketPage() {
         <InboxList
           items={visible}
           onComplete={canComplete ? handleComplete : undefined}
-          onRefile={setRefiling}
+          onRefile={openRefile}
           emptyMessage={
             hiddenCount > 0
               ? `Nothing left in ${bucketLabel(bucket)} — ${hiddenCount} completed and hidden.`

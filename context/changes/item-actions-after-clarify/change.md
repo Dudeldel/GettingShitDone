@@ -1,7 +1,7 @@
 ---
 change_id: item-actions-after-clarify
 title: What an item can do after it has been clarified
-status: implementing
+status: implemented
 created: 2026-09-14
 updated: 2026-09-14
 archived_at: null

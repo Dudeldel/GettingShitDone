@@ -58,8 +58,9 @@ class ItemRepository implements ItemRepositoryInterface
                     //
                     // The null branch is safe ONLY because of the `bucket = inbox` predicate
                     // above: a completed item has left the Inbox, so it can never be clarified
-                    // again and this can never overwrite a real completion. Whoever implements
-                    // FR-010 (re-file an already-bucketed item) and relaxes that predicate must
+                    // again and this can never overwrite a real completion. This is why FR-010
+                    // landed as refile() — a SEPARATE verb that writes the bucket and nothing
+                    // else — instead of a relaxed clarify. Anyone loosening this predicate must
                     // stop writing null here, or re-filing a finished Next Action to Calendar
                     // will silently erase the fact that it was done.
                     'completed_at' => $outcome->completed ? now() : null,

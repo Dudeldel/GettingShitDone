@@ -51,7 +51,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
         // The clarify failures, each a distinct thing the client must handle differently.
         // 404 and 409 must stay apart: a client that confuses "no such item" with "already
-        // clarified" will retry forever. Re-filing a bucketed item is FR-010, deferred to v2.
+        // clarified" will retry forever. A clarified item is not stuck — it is re-filed through
+        // /refile, which answers 422 rather than 409 when the destination is not legal.
         $exceptions->render(
             fn (ItemNotFoundException $e) => response()->json(
                 ['message' => 'That item no longer exists.'], Response::HTTP_NOT_FOUND,
