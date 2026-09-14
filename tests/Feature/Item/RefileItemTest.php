@@ -35,8 +35,14 @@ it('carries an existing completion across the move', function () {
     // that array would silently un-finish a finished item the moment it was moved — a defect
     // no assertion on the bucket alone could see.
     $id = seedItem('oddzwonić do Marka', GtdBucket::NextActions);
-    test()->postJson("/api/items/{$id}/complete", ['completed' => true])
-        ->assertStatus(Response::HTTP_OK);
+    $completedAt = test()->postJson("/api/items/{$id}/complete", ['completed' => true])
+        ->assertStatus(Response::HTTP_OK)
+        ->json('completedAt');
+
+    // Move the clock before the second write. Without this the two land in the same second and
+    // a re-stamped completed_at is string-identical to a carried one — the assertion below
+    // would then pass against exactly the write it exists to catch.
+    test()->travel(1)->minutes();
 
     test()->postJson("/api/items/{$id}/refile", ['bucket' => 'calendar'])
         ->assertStatus(Response::HTTP_OK)
@@ -44,7 +50,32 @@ it('carries an existing completion across the move', function () {
 
     $moved = test()->getJson('/api/items?bucket=calendar')->json('0');
 
-    expect($moved['completedAt'])->not->toBeNull();
+    // The ORIGINAL timestamp, not merely "something non-null". `not->toBeNull()` cannot tell a
+    // carried completion from a re-stamped one, so a refile writing completed_at => now() would
+    // destroy when the work was actually finished and still pass.
+    expect($moved['completedAt'])->toBe($completedAt);
+});
+
+it('drops a completion when the move lands somewhere done means nothing', function () {
+    // The mirror image of the test above, and the reason it is not a contradiction: Reference,
+    // Someday/Maybe and Trash cannot hold a completion — setCompleted() refuses them — so an
+    // item carrying one INTO them would render "✓ Done" with no control able to clear it again.
+    $id = seedItem('artykuł o GTD', GtdBucket::NextActions);
+    test()->postJson("/api/items/{$id}/complete", ['completed' => true])
+        ->assertStatus(Response::HTTP_OK);
+
+    test()->postJson("/api/items/{$id}/refile", ['bucket' => 'reference'])
+        ->assertStatus(Response::HTTP_OK)
+        ->assertJsonPath('completedAt', null);
+
+    expect(test()->getJson('/api/items?bucket=reference')->json('0.completedAt'))->toBeNull();
+
+    // And the item is not stranded: it can be completed again once it is back somewhere that
+    // means something.
+    test()->postJson("/api/items/{$id}/refile", ['bucket' => 'next_actions'])
+        ->assertStatus(Response::HTTP_OK);
+    test()->postJson("/api/items/{$id}/complete", ['completed' => true])
+        ->assertStatus(Response::HTTP_OK);
 });
 
 it('lets an item leave the Trash, because only emptying it is final', function () {

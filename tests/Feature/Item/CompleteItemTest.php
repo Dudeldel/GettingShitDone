@@ -100,16 +100,18 @@ it('rejects an unauthenticated completion', function () {
         ->assertStatus(Response::HTTP_UNAUTHORIZED);
 });
 
-it('records marking and clearing as different events, without the item text', function () {
+it('records marking and clearing as one action discriminated by context, without the item text', function () {
     $id = seedItem('my bank pin is 4711', GtdBucket::NextActions);
     Log::spy();
 
     test()->postJson("/api/items/{$id}/complete", ['completed' => true])->assertStatus(Response::HTTP_OK);
     test()->postJson("/api/items/{$id}/complete", ['completed' => false])->assertStatus(Response::HTTP_OK);
 
-    foreach (['item.completion.marked' => true, 'item.completion.cleared' => false] as $action => $completed) {
+    // One action name ending in the outcome, like every sibling event, so a filter on
+    // `.success` sees completions too. Which way it went rides context.completed.
+    foreach ([true, false] as $completed) {
         Log::shouldHaveReceived('log')->withArgs(
-            fn ($level, $message, $context) => $message === $action
+            fn ($level, $message, $context) => $message === 'item.completion.success'
                 && $context['item_id'] === $id
                 && $context['completed'] === $completed
                 && ! str_contains(json_encode($context), '4711'),

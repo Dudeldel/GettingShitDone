@@ -11,6 +11,7 @@ export function InboxList({
   onClarify,
   onComplete,
   onRefile,
+  pendingCompletions,
   emptyMessage = 'Your Inbox is empty. Type an idea above to capture it.',
 }: {
   items: Item[]
@@ -23,6 +24,8 @@ export function InboxList({
   onComplete?: (item: Item, next: boolean) => void
   /** Passed by the bucket views; the Inbox clarifies instead of re-filing. */
   onRefile?: (item: Item) => void
+  /** Rows whose completion write is still in flight; their checkbox is inert until it lands. */
+  pendingCompletions?: ReadonlySet<number>
   /**
    * Overridden by the bucket views. The default names the Inbox because this list started
    * as the Inbox's, and a Trash view announcing "Your Inbox is empty" is simply wrong about
@@ -51,6 +54,7 @@ export function InboxList({
               type="checkbox"
               className="mt-1 size-4 shrink-0 accent-accent"
               checked={item.completedAt !== null}
+              disabled={pendingCompletions?.has(item.id) ?? false}
               aria-label={`Mark "${item.title}" done`}
               onChange={(e) => onComplete(item, e.target.checked)}
             />

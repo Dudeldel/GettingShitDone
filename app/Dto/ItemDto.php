@@ -13,8 +13,8 @@ use JsonSerializable;
  * (tags/contexts/flags) add their write paths. delegatedTo is filled by
  * clarify (FR-007) and is null for the seven buckets that are not Delegation. FR-007's
  * "done flag" is completedAt, shared with every other action bucket.
- * completedAt is set only when clarify's two-minute timer ended in "done" (FR-006); null
- * everywhere else means "not finished", not "unknown".
+ * completedAt is written by clarify's two-minute branch (FR-006) and by the /complete verb,
+ * which can also clear it again; null means "not finished", not "unknown".
  *
  * @implements Arrayable<string, mixed>
  */

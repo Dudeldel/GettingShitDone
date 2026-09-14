@@ -377,10 +377,10 @@ that anything reads: the column holds `false` or `null` and has never had a writ
 
 #### Automated
 
-- [x] 3.1 All six gates green — 01710e3
-- [x] 3.2 No comment still describes FR-010 as parked — 01710e3
-- [x] 3.3 Deliberate-breakage pass, including refile-preserves-completion and complete-preserves-bucket — 01710e3
+- [x] 3.1 All six gates green — 66b6d7c
+- [x] 3.2 No comment still describes FR-010 as parked — 66b6d7c
+- [x] 3.3 Deliberate-breakage pass, including refile-preserves-completion and complete-preserves-bucket — 66b6d7c
 
 #### Manual
 
-- [x] 3.4 Full walk across the four action buckets and all seven destinations, at 1280px and 400px — 01710e3
+- [x] 3.4 Full walk across the four action buckets and all seven destinations, at 1280px and 400px — 66b6d7c

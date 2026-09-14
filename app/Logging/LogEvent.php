@@ -129,7 +129,10 @@ class LogEvent
      */
     public static function itemCompletionChanged(int $itemId, bool $completed): void
     {
-        self::emit('item.completion.'.($completed ? 'marked' : 'cleared'), 'database', 'success', [
+        // One action ending in the outcome, like every sibling — a filter on actions ending
+        // `.success` must not silently miss completions. Marked-vs-cleared rides
+        // context.completed, which every assertion on this event already reads.
+        self::emit('item.completion.success', 'database', 'success', [
             'item_id' => $itemId,
             'completed' => $completed,
         ]);

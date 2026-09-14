@@ -99,6 +99,16 @@ class ItemService
      */
     public function refile(int $itemId, RefileItemPayload $payload): ItemDto
     {
+        // The edge validates this too (RefileItemRequest derives its rule from the same
+        // predicate). It is asserted again HERE because GtdBucket promises the rule is read by
+        // both the edge and the domain, and a promise only one layer keeps is worse than none:
+        // a job, a command or a future controller would walk an item back into the Inbox, where
+        // clarify's `bucket = inbox` predicate matches again and its `completed_at => null`
+        // write erases a real completion.
+        if (! $payload->destination->isDestination()) {
+            throw ItemActionNotAllowedException::refileToInbox();
+        }
+
         try {
             $item = $this->items->refile($itemId, $payload->destination);
         } catch (ItemPersistenceException $e) {

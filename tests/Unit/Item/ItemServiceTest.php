@@ -7,6 +7,7 @@ use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
 use App\Dto\Payload\CompleteItemPayload;
 use App\Dto\Payload\RefileItemPayload;
+use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemPersistenceException;
 use App\Services\ItemService;
 use Illuminate\Support\Facades\Log;
@@ -193,6 +194,21 @@ it('hands the destination to the repository and records the move', function () {
     );
 });
 
+it('refuses the Inbox as a destination without ever reaching the repository', function () {
+    // The HTTP edge rejects this too, and every other refile test goes through the edge — which
+    // is exactly why this one does not. GtdBucket promises the rule is read by both the edge and
+    // the domain; if only the FormRequest enforces it, a job or a command walks an item back
+    // into the Inbox, where clarify matches again and its completed_at => null erases a real
+    // completion. The repository must not even be called.
+    $repo = fakeItemRepository();
+
+    expect(fn () => (new ItemService($repo, new ClarifyDecision))
+        ->refile(7, RefileItemPayload::fromArray(['bucket' => 'inbox'])))
+        ->toThrow(ItemActionNotAllowedException::class, 'Inbox');
+
+    expect($repo->refiledItemId)->toBeNull();
+});
+
 it('records marking and clearing as different events', function () {
     Log::spy();
     $service = new ItemService(fakeItemRepository(), new ClarifyDecision);
@@ -201,10 +217,10 @@ it('records marking and clearing as different events', function () {
     $service->setCompleted(7, CompleteItemPayload::fromArray(['completed' => false]));
 
     Log::shouldHaveReceived('log')->withArgs(
-        fn ($level, $message, $context) => $message === 'item.completion.marked' && $context['completed'] === true,
+        fn ($level, $message, $context) => $message === 'item.completion.success' && $context['completed'] === true,
     );
     Log::shouldHaveReceived('log')->withArgs(
-        fn ($level, $message, $context) => $message === 'item.completion.cleared' && $context['completed'] === false,
+        fn ($level, $message, $context) => $message === 'item.completion.success' && $context['completed'] === false,
     );
 });
 

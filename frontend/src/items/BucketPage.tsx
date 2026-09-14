@@ -28,6 +28,8 @@ export function BucketPage() {
   const headingRef = useRef<HTMLHeadingElement>(null)
   /** The control that opened the picker, so dismissing it can hand focus back. */
   const refileTrigger = useRef<HTMLElement | null>(null)
+  /** Item ids with a completion write in flight — one per row at a time. */
+  const [pending, setPending] = useState<ReadonlySet<number>>(new Set())
   const [actionStatus, setActionStatus] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
@@ -72,6 +74,12 @@ export function BucketPage() {
 
   const handleComplete = useCallback(
     async (item: Item, next: boolean) => {
+      // One write per row at a time: this id drives the checkbox's `disabled`, so the second of
+      // two rapid toggles never lands. Two overlapping writes would resolve in arrival order,
+      // not send order, so the box could settle on the stale answer and disagree with the
+      // database until a reload — and the rollback would restore the timestamp the FIRST
+      // optimistic write invented rather than the real one.
+      setPending((current) => new Set(current).add(item.id))
       setActionError(null)
       const before = item.completedAt
       // Optimistic: a checkbox that waits for a round trip feels broken. The rollback below
@@ -92,12 +100,24 @@ export function BucketPage() {
             ? `Marked "${item.title}" done.${showCompleted ? '' : ' Turn on Show completed to see it.'}`
             : `"${item.title}" is no longer marked done.`,
         )
+        // The row is about to be filtered out from under the checkbox the user is standing on.
+        // Same move handleRefiled makes, for the same reason: focus must not fall to <body>.
+        if (next && !showCompleted) {
+          headingRef.current?.focus()
+        }
       } catch (err) {
         setItems((current) =>
           current.map((i) => (i.id === item.id ? { ...i, completedAt: before } : i)),
         )
         setActionStatus(null)
         setActionError(messageFor(err))
+      } finally {
+        setPending((current) => {
+          const rest = new Set(current)
+          rest.delete(item.id)
+
+          return rest
+        })
       }
     },
     [showCompleted],
@@ -215,7 +235,10 @@ export function BucketPage() {
         <InboxList
           items={visible}
           onComplete={canComplete ? handleComplete : undefined}
-          onRefile={openRefile}
+          // Absent in the Inbox rather than present-and-doomed-to-422, the same rule the
+          // checkbox follows: an Inbox item is unclarified, so every destination is refused.
+          onRefile={bucket === 'inbox' ? undefined : openRefile}
+          pendingCompletions={pending}
           emptyMessage={
             hiddenCount > 0
               ? `Nothing left in ${bucketLabel(bucket)} — ${hiddenCount} completed and hidden.`

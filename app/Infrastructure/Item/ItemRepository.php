@@ -101,10 +101,7 @@ class ItemRepository implements ItemRepositoryInterface
             $affected = Item::query()
                 ->where('id', $itemId)
                 ->where('bucket', '<>', GtdBucket::Inbox->value)
-                ->update([
-                    'bucket' => $destination->value,
-                    'updated_at' => now(),
-                ]);
+                ->update($this->refileWrite($destination));
         } catch (QueryException $e) {
             throw new ItemPersistenceException((string) $e->getCode());
         }
@@ -116,6 +113,37 @@ class ItemRepository implements ItemRepositoryInterface
         }
 
         return $this->readBack($itemId);
+    }
+
+    /**
+     * The columns a re-file writes.
+     *
+     * Normally bucket and timestamp only — copying clarify's array here is the one mistake this
+     * method exists to avoid, because it writes completed_at => null and would erase the
+     * completion of a finished item the moment somebody moved it.
+     *
+     * The exception is a destination where "done" means nothing. isActionBucket() says a
+     * completion is uninterpretable in Reference, Someday/Maybe and Trash, and setCompleted()
+     * refuses to write one there — so carrying a completion INTO one of them strands it: the
+     * item renders "✓ Done" with no control able to clear it again, because the verb that
+     * clears it refuses that bucket. Clearing it on the way in is the deliberate opposite of
+     * the trap above: the trap is erasing a completion that still means something, this is
+     * dropping one that no longer can.
+     *
+     * @return array<string, mixed>
+     */
+    private function refileWrite(GtdBucket $destination): array
+    {
+        $write = [
+            'bucket' => $destination->value,
+            'updated_at' => now(),
+        ];
+
+        if (! $destination->isActionBucket()) {
+            $write['completed_at'] = null;
+        }
+
+        return $write;
     }
 
     public function setCompleted(int $itemId, bool $completed): ItemDto

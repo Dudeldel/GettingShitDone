@@ -477,6 +477,78 @@ describe('moving an item to another bucket', () => {
     expect(screen.getByText('artykuł')).toBeInTheDocument()
   })
 
+  it('sends one write per row even when the box is clicked twice', async () => {
+    // Only reachable with "Show completed" on: in the default view the optimistic write hides
+    // the row immediately, taking the checkbox with it. With the row still on screen, a second
+    // click lands while the first write is in flight — and two writes resolve in arrival order,
+    // not send order, so the box could settle on the stale answer, while the rollback would
+    // restore the timestamp the FIRST optimistic write invented rather than the real one.
+    let sent = 0
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    listOnlyFor('projects', [makeItem({ id: 1, title: 'wymienić piec', bucket: 'projects' })])
+    server.use(
+      http.post('*/api/items/:id/complete', async () => {
+        sent += 1
+        await held
+
+        return HttpResponse.json(makeItem({
+          id: 1, title: 'wymienić piec', bucket: 'projects', completedAt: '2026-09-14T10:00:00+00:00',
+        }))
+      }),
+    )
+
+    const { user } = renderBucket('/bucket/projects')
+    await screen.findByText('wymienić piec')
+    await user.click(screen.getByRole('checkbox', { name: 'Show completed' }))
+    const box = screen.getByRole('checkbox', { name: /mark "wymienić piec" done/i })
+
+    await user.click(box)
+    await waitFor(() => expect(box).toBeDisabled())
+    await user.click(box)
+
+    expect(sent).toBe(1)
+
+    release()
+    await waitFor(() => expect(box).not.toBeDisabled())
+    expect(sent).toBe(1)
+    expect(box).toBeChecked()
+  })
+
+  it('keeps focus on the page when completing a row hides it', async () => {
+    // The same defect the picker had, on the path the picker fix did not cover: with completed
+    // items hidden by default, ticking the box unmounts the checkbox the user is standing on.
+    listOnlyFor('next_actions', [makeItem({ id: 1, title: 'babababa', bucket: 'next_actions' })])
+    server.use(
+      http.post('*/api/items/:id/complete', () =>
+        HttpResponse.json(makeItem({
+          id: 1, title: 'babababa', bucket: 'next_actions', completedAt: '2026-09-14T10:00:00+00:00',
+        })),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await screen.findByText('babababa')
+
+    await user.click(screen.getByRole('checkbox', { name: /mark "babababa" done/i }))
+
+    await waitFor(() => expect(screen.queryByText('babababa')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Next Actions', level: 1 })).toHaveFocus()
+  })
+
+  it('offers no Move button in the Inbox, where every destination is refused', async () => {
+    // Reachable only by typing /bucket/inbox, but the rule is the checkbox's rule: a control
+    // whose request the server always refuses should be absent, not present and doomed to 422.
+    listOnlyFor('inbox', [makeItem({ id: 1, title: 'nieprzemyślany pomysł', bucket: 'inbox' })])
+
+    renderBucket('/bucket/inbox')
+    await screen.findByText('nieprzemyślany pomysł')
+
+    expect(screen.queryByRole('button', { name: /move "nieprzemyślany pomysł"/i })).not.toBeInTheDocument()
+  })
+
   it('hands focus back to the row it came from when the picker is dismissed', async () => {
     // Found by walking the app, not by a test: Escape closed the panel and left focus on
     // <body>, so a keyboard user was dropped at the top of the document and had to tab

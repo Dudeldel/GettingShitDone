@@ -14,7 +14,9 @@ use Illuminate\Support\Carbon;
  * deliberately NOT fillable: S-06/S-07 add their write paths together with validation.
  * The Delegation column (delegated_to) is likewise not fillable —
  * clarify writes them through an explicit update, so no request array can reach them.
- * completed_at (FR-006) follows the same rule: only the clarify write path sets it.
+ * completed_at follows the same rule, and now has TWO write paths rather than one: clarify's
+ * two-minute branch (FR-006) and the /complete verb. Both go through explicit updates in the
+ * repository, which is what keeps it out of reach of any request array.
  *
  * @property int $id
  * @property string $title

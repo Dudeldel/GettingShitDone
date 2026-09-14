@@ -61,7 +61,14 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            ]) + [
+                // MATCHED rows, not CHANGED rows. The repository's guarded writes tell "the guard
+                // rejected this" apart from "no such item" by the affected count, and SQLite (dev
+                // and test) already returns matched. Without this the two disagree only in
+                // production: a write whose values are all already equal returns 0, and a repeated
+                // complete inside one second answers 422 about a bucket the item is actually in.
+                Mysql::ATTR_FOUND_ROWS => true,
+            ] : [],
         ],
 
         'mariadb' => [
@@ -81,7 +88,14 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            ]) + [
+                // MATCHED rows, not CHANGED rows. The repository's guarded writes tell "the guard
+                // rejected this" apart from "no such item" by the affected count, and SQLite (dev
+                // and test) already returns matched. Without this the two disagree only in
+                // production: a write whose values are all already equal returns 0, and a repeated
+                // complete inside one second answers 422 about a bucket the item is actually in.
+                Mysql::ATTR_FOUND_ROWS => true,
+            ] : [],
         ],
 
         'pgsql' => [
