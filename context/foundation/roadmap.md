@@ -262,8 +262,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ### S-10: A visual design the product deserves
 
 - **Outcome:** user sees an interface that reads as a considered product — a real visual
-  hierarchy, an accent that means something, working light/dark, and no layout defects —
-  instead of the unstyled scaffold the feature slices have been building on.
+  hierarchy, an accent that means something, a visible focus treatment, and no layout defects
+  — instead of the unstyled scaffold the feature slices have been building on. (Written before
+  the direction was settled; dark mode was then deliberately cut, so the original "working
+  light/dark" wording is corrected here rather than copied into the permanent record.)
 - **Change ID:** visual-design-pass
 - **PRD refs:** none. The PRD is silent on visual design: it commits no NFR for it, and its
   only adjacent line defers "list-view responsiveness" as an uncommitted Open Question owned
