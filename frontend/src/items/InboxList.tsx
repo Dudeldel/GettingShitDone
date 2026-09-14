@@ -9,13 +9,20 @@ function capturedAt(iso: string): string {
 export function InboxList({
   items,
   onClarify,
+  emptyMessage = 'Your Inbox is empty. Type an idea above to capture it.',
 }: {
   items: Item[]
   /** Omitted by callers that only display items — bucket views (S-05) will not clarify. */
   onClarify?: (item: Item) => void
+  /**
+   * Overridden by the bucket views. The default names the Inbox because this list started
+   * as the Inbox's, and a Trash view announcing "Your Inbox is empty" is simply wrong about
+   * which list the user is looking at.
+   */
+  emptyMessage?: string
 }) {
   if (items.length === 0) {
-    return <p style={{ color: 'var(--muted)' }}>Your Inbox is empty. Type an idea above to capture it.</p>
+    return <p style={{ color: 'var(--muted)' }}>{emptyMessage}</p>
   }
 
   return (

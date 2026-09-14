@@ -236,6 +236,14 @@ export function clarifyItem(id: number, answers: ClarifyAnswers): Promise<Item> 
   })
 }
 
+/**
+ * Permanently discard everything in the Trash. No item id anywhere: this is scoped to the
+ * bucket by design, so it cannot become a generic delete (see the S-05 plan).
+ */
+export function emptyTrash(): Promise<{ deleted: number }> {
+  return request<{ deleted: number }>('/api/trash', { method: 'DELETE' })
+}
+
 export function listItems(bucket?: GtdBucket): Promise<Item[]> {
   const query = bucket === undefined ? '' : `?bucket=${encodeURIComponent(bucket)}`
 

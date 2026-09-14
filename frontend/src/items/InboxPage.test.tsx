@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import type { Item } from '../api'
 import { AuthProvider } from '../auth/AuthContext'
@@ -10,10 +11,13 @@ import { InboxPage } from './InboxPage'
 function renderPage() {
   return {
     user: userEvent.setup(),
+    // MemoryRouter because InboxPage now renders BucketNav, whose <Link>s need a router.
     ...render(
-      <AuthProvider>
-        <InboxPage />
-      </AuthProvider>,
+      <MemoryRouter>
+        <AuthProvider>
+          <InboxPage />
+        </AuthProvider>
+      </MemoryRouter>,
     ),
   }
 }

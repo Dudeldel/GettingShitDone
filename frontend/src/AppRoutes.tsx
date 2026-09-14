@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { LoginPage } from './auth/LoginPage'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { BucketPage } from './items/BucketPage'
 import { InboxPage } from './items/InboxPage'
 
 /**
@@ -15,6 +16,10 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<InboxPage />} />
+        {/* Each bucket gets its own URL, so refresh and bookmarking work — and the Trash
+            purge's "only from the Trash view" boundary becomes a fact about the route tree
+            rather than a render condition someone can loosen later. */}
+        <Route path="/bucket/:bucket" element={<BucketPage />} />
       </Route>
     </Routes>
   )

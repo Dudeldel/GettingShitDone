@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
 import { useAuth } from '../auth/context'
+import { BucketNav } from './BucketNav'
 import { CaptureForm } from './CaptureForm'
 import { ClarifyDialog } from './ClarifyDialog'
 import { InboxList } from './InboxList'
@@ -93,6 +94,8 @@ export function InboxPage() {
           }}
         />
       )}
+
+      <BucketNav current="inbox" />
 
       <h2>Inbox</h2>
       {loadError !== null && (

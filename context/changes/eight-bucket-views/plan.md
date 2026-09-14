@@ -261,25 +261,25 @@ No schema change. The purge is irreversible by design and has no undo.
 
 #### Automated
 
-- [x] 1.1 Full backend quality gate passes
-- [x] 1.2 Scramble export succeeds
-- [x] 1.3 Purge test proven able to fail by deliberate breakage
-- [x] 1.4 Blast-radius test proven able to fail by deliberate breakage
+- [x] 1.1 Full backend quality gate passes — c02f075
+- [x] 1.2 Scramble export succeeds — c02f075
+- [x] 1.3 Purge test proven able to fail by deliberate breakage — c02f075
+- [x] 1.4 Blast-radius test proven able to fail by deliberate breakage — c02f075
 
 #### Manual
 
-- [x] 1.5 No route or repository signature accepts an item id for deletion
+- [x] 1.5 No route or repository signature accepts an item id for deletion — c02f075
 
 ### Phase 2: The eight bucket views
 
 #### Automated
 
-- [ ] 2.1 Frontend tests pass
-- [ ] 2.2 Frontend build and lint pass
-- [ ] 2.3 Backend suite still green
-- [ ] 2.4 Purge-visibility test proven able to fail by deliberate breakage
+- [x] 2.1 Frontend tests pass
+- [x] 2.2 Frontend build and lint pass
+- [x] 2.3 Backend suite still green
+- [x] 2.4 Purge-visibility test proven able to fail by deliberate breakage
 
 #### Manual
 
-- [ ] 2.5 All eight buckets reachable; clarified items appear where routed
-- [ ] 2.6 Emptying the Trash leaves the other seven buckets untouched
+- [x] 2.5 All eight buckets reachable; clarified items appear where routed
+- [x] 2.6 Emptying the Trash leaves the other seven buckets untouched
