@@ -106,7 +106,7 @@ Next Actions — what it already was — and stays visible there, marked done.
 - [x] 1.3 Record: LogEvent + service wiring — 027e882
 - [x] 1.4 Tests: unit branch matrix + feature clarify cases — 027e882
 #### Manual
-- [x] 1.5 Read a completed item back through the API — completedAt set on the completed item, still null on one filed the other way
+- [x] 1.5 Read a completed item back through the API — completedAt set on the completed item, still null on one filed the other way — 027e882
 
 ### Phase 2: The frontend — the question and the countdown
 #### Automated
@@ -115,7 +115,7 @@ Next Actions — what it already was — and stays visible there, marked done.
 - [x] 2.3 InboxList done marker — 350981a
 - [x] 2.4 Tests on fake timers — 350981a
 #### Manual
-- [x] 2.5 Drive the timer in a real browser — clock ticked 1:57 → reset on "I need more time" → Done → "✓ Done" in Next Actions, absent on the item filed without a timer
+- [x] 2.5 Drive the timer in a real browser — clock ticked 1:57 → reset on "I need more time" → Done → "✓ Done" in Next Actions, absent on the item filed without a timer — 350981a
 
 ### Phase 3: Close out
 #### Automated
