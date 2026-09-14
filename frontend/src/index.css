@@ -99,67 +99,6 @@ h3 {
 }
 
 /**
- * A floor for controls that have not been converted yet.
- *
- * Preflight strips the native appearance from every button and input — which is what fixes
- * the 13.33px Arial defect, but it also means an unconverted control renders with no border
- * and no background, i.e. invisible. With one route converted per phase, the Login and bucket
- * screens would be unusable in the meantime. That is a consequence of vertical phasing, not
- * an acceptable intermediate state.
- *
- * This sits in `base`, so anything in `components` (.btn, .field) overrides it without a
- * fight. It is deleted in Phase 3, once the last bare control is gone.
- */
-@layer base {
-  button {
-    border: 1px solid var(--color-line);
-    border-radius: 8px;
-    background: var(--color-surface);
-    color: var(--color-body);
-    padding: 0.4rem 0.75rem;
-    font-size: 0.9375rem;
-    line-height: 1.2;
-    cursor: pointer;
-  }
-
-  button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  input {
-    border: 1px solid var(--color-line);
-    border-radius: 8px;
-    background: var(--color-surface);
-    color: var(--color-ink);
-    padding: 0.4rem 0.7rem;
-  }
-
-  input::placeholder {
-    color: var(--color-muted);
-  }
-}
-
-/**
- * Legacy token aliases.
- *
- * The screens restyled in Phases 2 and 3 still read these names inline. Aliasing rather than
- * deleting means the fixes land everywhere in Phase 1 — in particular `--muted` stops being
- * a duplicate of `--text`, so de-emphasised text is actually de-emphasised on every screen
- * immediately, not only on the ones already converted.
- *
- * Deleted in Phase 3, once the last inline reference is gone.
- */
-:root {
-  --text: var(--color-body);
-  --text-h: var(--color-ink);
-  --muted: var(--color-muted);
-  --border: var(--color-line);
-  --error: var(--color-danger);
-  --success: var(--color-ok);
-}
-
-/**
  * A small component layer, written as plain CSS against the tokens above.
  *
  * These exist so the JSX stays readable and so the same control looks the same on every
@@ -263,6 +202,22 @@ h3 {
      giving `aria-invalid` a test: losing it is now a visible regression too. */
   .field[aria-invalid='true'] {
     border-color: var(--color-danger);
+  }
+
+  /* Revealed only if the wait lasts long enough to be worth explaining. A rehydration that
+     answers in 80ms should show nothing at all rather than flash a message. */
+  .settle {
+    animation: settle-in 0.2s ease 0.3s both;
+  }
+
+  @keyframes settle-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   /* Live regions are mounted before they have text, deliberately (ph3 F6a). Reserving the

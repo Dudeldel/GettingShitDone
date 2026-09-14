@@ -449,27 +449,27 @@ and the CSS delta should be small. Worth a glance at the build output in Phase 3
 
 #### Automated
 
-- [x] 2.1 Frontend tests pass
-- [x] 2.2 Build and lint pass
+- [x] 2.1 Frontend tests pass — e55388f
+- [x] 2.2 Build and lint pass — e55388f
 
 #### Manual
 
-- [x] 2.3 Walk all eight buckets: loading, empty, populated, load error
-- [x] 2.4 Walk the Trash sequence: idle, confirming, purging, failed, purged
-- [x] 2.5 Destructive button reads as dangerous; focus still lands on "Keep them"
-- [x] 2.6 Delegation shows "Waiting on:", Next Actions shows "✓ Done"
-- [x] 2.7 Header identical on every screen; Log out works from a bucket view
+- [x] 2.3 Walk all eight buckets: loading, empty, populated, load error — e55388f
+- [x] 2.4 Walk the Trash sequence: idle, confirming, purging, failed, purged — e55388f
+- [x] 2.5 Destructive button reads as dangerous; focus still lands on "Keep them" — e55388f
+- [x] 2.6 Delegation shows "Waiting on:", Next Actions shows "✓ Done" — e55388f
+- [x] 2.7 Header identical on every screen; Log out works from a bucket view — e55388f
 
 ### Phase 3: Login, the missing surfaces, and close-out
 
 #### Automated
 
-- [ ] 3.1 All six gates green
-- [ ] 3.2 No orphaned asset references remain
+- [x] 3.1 All six gates green
+- [x] 3.2 No orphaned asset references remain
 
 #### Manual
 
-- [ ] 3.3 Walk login: idle, session-expired, submitting, 401, other error
-- [ ] 3.4 Unknown URL signed in and signed out; neither leaks account existence
-- [ ] 3.5 Hard-reload with a stored token shows the rehydration state without flashing
-- [ ] 3.6 Full sweep of every state across all three routes at 1280px and 400px
+- [x] 3.3 Walk login: idle, session-expired, submitting, 401, other error
+- [x] 3.4 Unknown URL signed in and signed out; neither leaks account existence
+- [x] 3.5 Hard-reload with a stored token shows the rehydration state without flashing
+- [x] 3.6 Full sweep of every state across all three routes at 1280px and 400px

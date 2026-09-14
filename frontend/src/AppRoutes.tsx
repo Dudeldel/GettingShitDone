@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { LoginPage } from './auth/LoginPage'
+import { NotFound } from './NotFound'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { BucketPage } from './items/BucketPage'
 import { InboxPage } from './items/InboxPage'
@@ -21,6 +22,9 @@ export function AppRoutes() {
             rather than a render condition someone can loosen later. */}
         <Route path="/bucket/:bucket" element={<BucketPage />} />
       </Route>
+      {/* Outside the guard on purpose: an unknown address is not a reason to reveal whether
+          an account exists. Without this route the app rendered a blank document. */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

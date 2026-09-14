@@ -56,8 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   // Avoid a flash of the login screen while we rehydrate the session from storage.
+  //
+  // Returning null here meant every reload carrying a stored token showed a blank white
+  // document for the length of a round trip — the first thing a returning user saw. The
+  // message is delayed rather than immediate, so a fast rehydration does not flash it.
   if (!ready) {
-    return null
+    return (
+      <main className="flex min-h-svh items-center justify-center px-4">
+        <p className="settle text-sm text-muted">Restoring your session…</p>
+      </main>
+    )
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
