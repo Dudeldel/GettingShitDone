@@ -595,32 +595,32 @@ broken one.
 
 #### Automated
 
-- [x] 2.1 Pest suite passes
-- [x] 2.2 Larastan clean at level 6; Pint clean
-- [x] 2.3 Migration applies and rolls back
-- [x] 2.4 Feature tests cover union membership, exclusions, completed inclusion and ordering
-- [x] 2.5 Deliberate breakage pass: null-rank ordering and action-bucket clause each redden
+- [x] 2.1 Pest suite passes — 962f10c
+- [x] 2.2 Larastan clean at level 6; Pint clean — 962f10c
+- [x] 2.3 Migration applies and rolls back — 962f10c
+- [x] 2.4 Feature tests cover union membership, exclusions, completed inclusion and ordering — 962f10c
+- [x] 2.5 Deliberate breakage pass: null-rank ordering and action-bucket clause each redden — 962f10c
 
 #### Manual
 
-- [x] 2.6 Dated Next Action appears in Calendar and remains in Next Actions
-- [x] 2.7 Undated Calendar-filed item appears below the dated ones
+- [x] 2.6 Dated Next Action appears in Calendar and remains in Next Actions — 962f10c
+- [x] 2.7 Undated Calendar-filed item appears below the dated ones — 962f10c
 
 ### Phase 3: Rendering attributes and the Calendar view
 
 #### Automated
 
-- [ ] 3.1 npm run build and npm run lint pass
-- [ ] 3.2 Vitest passes
-- [ ] 3.3 InboxList tests cover each attribute present/absent, date format and overdue marker
-- [ ] 3.4 BucketPage tests cover Calendar home-bucket labels and empty state
-- [ ] 3.5 Deliberate breakage pass: tag rendering and date formatting each redden
+- [x] 3.1 npm run build and npm run lint pass
+- [x] 3.2 Vitest passes
+- [x] 3.3 InboxList tests cover each attribute present/absent, date format and overdue marker
+- [x] 3.4 BucketPage tests cover Calendar home-bucket labels and empty state
+- [x] 3.5 Deliberate breakage pass: tag rendering and date formatting each redden
 
 #### Manual
 
-- [ ] 3.6 Seeded item displays all five attributes correctly
-- [ ] 3.7 Calendar view legible at ~400px with no horizontal scroll
-- [ ] 3.8 Overdue item distinguishable without relying on colour alone
+- [x] 3.6 Seeded item displays all five attributes correctly
+- [x] 3.7 Calendar view legible at ~400px with no horizontal scroll
+- [x] 3.8 Overdue item distinguishable without relying on colour alone
 
 ### Phase 4: The edit panel
 

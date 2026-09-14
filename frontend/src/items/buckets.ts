@@ -1,4 +1,4 @@
-import type { Destination, GtdBucket } from '../api'
+import type { Destination, GtdBucket, Item } from '../api'
 
 /**
  * The eight GTD lists, in the order the workflow moves through them.
@@ -46,3 +46,18 @@ export function isActionBucket(bucket: GtdBucket): boolean {
 
 /** The seven legal re-file targets — every bucket but the Inbox. */
 export const DESTINATIONS = BUCKETS.filter((bucket) => bucket !== 'inbox') as Destination[]
+
+/**
+ * Whether an item shows on the Calendar/Dates view.
+ *
+ * Mirrors the server's derived query, which is the authority — the view is computed in
+ * ItemRepository::listCalendar() and a reload always wins over whatever this says. The copy
+ * exists so re-filing a row does not have to refetch the whole list to work out whether it
+ * still belongs on screen.
+ *
+ * Two kinds qualify: anything filed to Calendar on purpose, and anything in an action bucket
+ * carrying a date. Keep this in step with the backend predicate if that rule ever changes.
+ */
+export function showsOnCalendar(item: Item): boolean {
+  return item.bucket === 'calendar' || (isActionBucket(item.bucket) && item.dueDate !== null)
+}

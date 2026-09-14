@@ -631,3 +631,98 @@ describe('moving an item to another bucket', () => {
     await waitFor(() => expect(screen.queryByText('stary newsletter')).not.toBeInTheDocument())
   })
 })
+
+describe('the Calendar view is derived, not a bucket query (FR-011)', () => {
+  it('names each row\'s home bucket, because most are not filed in Calendar', async () => {
+    // Without this the screen shows a Next Action under a heading saying "Calendar" with no
+    // explanation, which reads as a bug rather than as a view.
+    listOnlyFor('calendar', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+      makeItem({ id: 2, title: 'dentysta', bucket: 'calendar' }),
+    ])
+
+    renderBucket('/bucket/calendar')
+
+    expect(await screen.findByText('wyslac raport')).toBeInTheDocument()
+    expect(screen.getByText(/In Next Actions/)).toBeInTheDocument()
+    expect(screen.getByText(/In Calendar/)).toBeInTheDocument()
+  })
+
+  it('does not name the home bucket on an ordinary bucket screen', async () => {
+    listOnlyFor('next_actions', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+    ])
+
+    renderBucket('/bucket/next_actions')
+
+    expect(await screen.findByText('wyslac raport')).toBeInTheDocument()
+    // Every row here IS filed here, so the label would be noise on all eight other screens.
+    expect(screen.queryByText(/In Next Actions/)).not.toBeInTheDocument()
+  })
+
+  it('explains the rule in its empty state instead of claiming the list is a bucket', async () => {
+    listOnlyFor('calendar', [])
+
+    renderBucket('/bucket/calendar')
+
+    expect(await screen.findByText(/items you file here, plus anything actionable with a date/i))
+      .toBeInTheDocument()
+  })
+
+  it('keeps a dated item on screen when it is moved to another action bucket', async () => {
+    // The row's membership here is DERIVED. A dated Next Action moved to Projects is still an
+    // actionable commitment with a date, so it belongs on this screen afterwards — filtering
+    // it out (which every other bucket correctly does) would disagree with the server.
+    listOnlyFor('calendar', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+    ])
+    server.use(
+      http.post('*/api/items/1/refile', () =>
+        HttpResponse.json(
+          makeItem({ id: 1, title: 'wyslac raport', bucket: 'projects', dueDate: '2026-09-30' }),
+        ),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/calendar')
+    await user.click(await screen.findByRole('button', { name: /Move "wyslac raport"/ }))
+    await user.click(screen.getByRole('button', { name: 'Projects' }))
+
+    await waitFor(() => expect(screen.getByText(/In Projects/)).toBeInTheDocument())
+    expect(screen.getByText('wyslac raport')).toBeInTheDocument()
+  })
+
+  it('drops a dated item from the calendar when it is moved somewhere dates mean nothing', async () => {
+    listOnlyFor('calendar', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+    ])
+    server.use(
+      http.post('*/api/items/1/refile', () =>
+        HttpResponse.json(
+          makeItem({ id: 1, title: 'wyslac raport', bucket: 'reference', dueDate: '2026-09-30' }),
+        ),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/calendar')
+    await user.click(await screen.findByRole('button', { name: /Move "wyslac raport"/ }))
+    await user.click(screen.getByRole('button', { name: 'Reference' }))
+
+    await waitFor(() => expect(screen.queryByText('wyslac raport')).not.toBeInTheDocument())
+  })
+
+  it('offers Calendar as a destination for a row that only appears here because of its date', async () => {
+    // The picker excludes the ITEM's bucket, not the page's. Passing the page's would hide
+    // Calendar — a perfectly legal move — and offer Next Actions, where the item already is.
+    listOnlyFor('calendar', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+    ])
+
+    const { user } = renderBucket('/bucket/calendar')
+    await user.click(await screen.findByRole('button', { name: /Move "wyslac raport"/ }))
+
+    const picker = screen.getByRole('dialog')
+    expect(within(picker).getByRole('button', { name: 'Calendar' })).toBeInTheDocument()
+    expect(within(picker).queryByRole('button', { name: 'Next Actions' })).not.toBeInTheDocument()
+  })
+})

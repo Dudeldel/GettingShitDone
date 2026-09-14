@@ -3,7 +3,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { completeItem, type Destination, emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
 import { BucketNav } from './BucketNav'
-import { bucketLabel, isActionBucket, isGtdBucket } from './buckets'
+import { bucketLabel, isActionBucket, isGtdBucket, showsOnCalendar } from './buckets'
 import { InboxList } from './InboxList'
 import { RefileDialog } from './RefileDialog'
 
@@ -149,18 +149,39 @@ export function BucketPage() {
     }
   }, [])
 
-  const handleRefiled = useCallback((moved: Item, destination: Destination) => {
-    // It belongs to another list now, so it leaves this one — and the status line is what
-    // stops that reading as "it disappeared".
-    setItems((current) => current.filter((i) => i.id !== moved.id))
-    setRefiling(null)
-    refileTrigger.current = null
-    setActionError(null)
-    setActionStatus(`Moved "${moved.title}" to ${bucketLabel(destination)}.`)
-    // The row that opened the picker has just left the list, so there is no trigger to go
-    // back to. The heading is the nearest thing that still names where the user is.
-    headingRef.current?.focus()
-  }, [])
+  const handleRefiled = useCallback(
+    (moved: Item, destination: Destination) => {
+      // On Calendar a row's membership is DERIVED, not the page's bucket: a dated Next Action
+      // moved to Projects is still an actionable commitment carrying a date, so it belongs on
+      // this screen afterwards. Filtering it out would disagree with the server until a reload.
+      // Every other bucket's membership IS the stored column, so a move always removes the row.
+      const stays = bucket === 'calendar' && showsOnCalendar(moved)
+
+      setItems((current) =>
+        stays
+          ? current.map((i) => (i.id === moved.id ? moved : i))
+          : current.filter((i) => i.id !== moved.id),
+      )
+      setRefiling(null)
+      const trigger = refileTrigger.current
+      refileTrigger.current = null
+      setActionError(null)
+      setActionStatus(
+        stays
+          ? `Moved "${moved.title}" to ${bucketLabel(destination)}. It has a date, so it stays here.`
+          : `Moved "${moved.title}" to ${bucketLabel(destination)}.`,
+      )
+      // Same isConnected check cancelRefile makes: when the row stayed its Move button is
+      // still mounted and is where focus belongs; when it left, the heading is the nearest
+      // thing that still names where the user is.
+      if (stays && trigger !== null && trigger.isConnected) {
+        trigger.focus()
+      } else {
+        headingRef.current?.focus()
+      }
+    },
+    [bucket],
+  )
 
   const purge = useCallback(async () => {
     setPurgeError(null)
@@ -225,7 +246,10 @@ export function BucketPage() {
       {refiling !== null && (
         <RefileDialog
           item={refiling}
-          currentBucket={bucket}
+          // The ITEM's bucket, not the page's. Identical in every stored-membership view, but
+          // on Calendar the page's bucket is not where the item lives — passing it would hide
+          // Calendar from the destinations (a legal move) and offer the bucket it is already in.
+          currentBucket={refiling.bucket}
           onRefiled={handleRefiled}
           onCancel={cancelRefile}
         />
@@ -234,6 +258,7 @@ export function BucketPage() {
       {loadError === null && !loading && (
         <InboxList
           items={visible}
+          showBucket={bucket === 'calendar'}
           onComplete={canComplete ? handleComplete : undefined}
           // Absent in the Inbox rather than present-and-doomed-to-422, the same rule the
           // checkbox follows: an Inbox item is unclarified, so every destination is refused.
@@ -242,7 +267,9 @@ export function BucketPage() {
           emptyMessage={
             hiddenCount > 0
               ? `Nothing left in ${bucketLabel(bucket)} — ${hiddenCount} completed and hidden.`
-              : `Nothing in ${bucketLabel(bucket)}.`
+              : bucket === 'calendar'
+                ? 'Nothing on the calendar — items you file here, plus anything actionable with a date.'
+                : `Nothing in ${bucketLabel(bucket)}.`
           }
         />
       )}
