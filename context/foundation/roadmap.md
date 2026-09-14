@@ -42,7 +42,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
 | S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | done |
-| S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | proposed |
+| S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | in-progress |
 | S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap                    | absorbed by S-11 |
 
 ## Streams
@@ -344,7 +344,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   blocks it, the same `completed_at => null` write can erase it, and it needs the same thing in
   the UI that does not exist yet — a per-row action in a bucket view, which S-05 deliberately
   left out so a generic delete verb could not arrive by the back door.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-12: Mark an item done outside the two-minute timer
 

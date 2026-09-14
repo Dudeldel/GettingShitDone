@@ -196,9 +196,9 @@ export interface Item {
   context: string | null
   important: boolean | null
   urgent: boolean | null
-  // Filled by clarify when the item is delegated (FR-007); null for the other seven buckets.
+  // Filled by clarify when the item is delegated (FR-007); null for the other seven
+  // buckets. FR-007's "done flag" is completedAt, shared with every action bucket.
   delegatedTo: string | null
-  delegationDone: boolean | null
   // Set only when clarify's two-minute timer ended in "done" (FR-006). There is no Done
   // bucket among the eight, so completion is state: the item sits in Next Actions carrying
   // this. null means "not finished", never "unknown".

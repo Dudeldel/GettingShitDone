@@ -8,7 +8,10 @@ use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
+use App\Dto\Payload\CompleteItemPayload;
+use App\Dto\Payload\RefileItemPayload;
 use App\Exceptions\InvalidClarificationException;
+use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
@@ -83,6 +86,50 @@ class ItemService
         if ($outcome->twoMinuteOutcome !== null) {
             LogEvent::twoMinuteRuleApplied($item->id, $outcome->twoMinuteOutcome, $outcome->twoMinuteLoops);
         }
+
+        return $item;
+    }
+
+    /**
+     * Move an already-clarified item to a different destination (FR-010).
+     *
+     * @throws ItemActionNotAllowedException the item is still in the Inbox
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemPersistenceException the write failed
+     */
+    public function refile(int $itemId, RefileItemPayload $payload): ItemDto
+    {
+        try {
+            $item = $this->items->refile($itemId, $payload->destination);
+        } catch (ItemPersistenceException $e) {
+            LogEvent::itemRefileFailed($itemId, $payload->destination, $e->sqlState());
+
+            throw $e;
+        }
+
+        LogEvent::itemRefiled($item->id, $item->bucket);
+
+        return $item;
+    }
+
+    /**
+     * Mark an item done, or un-mark it.
+     *
+     * @throws ItemActionNotAllowedException the item is not in a bucket where done means anything
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemPersistenceException the write failed
+     */
+    public function setCompleted(int $itemId, CompleteItemPayload $payload): ItemDto
+    {
+        try {
+            $item = $this->items->setCompleted($itemId, $payload->completed);
+        } catch (ItemPersistenceException $e) {
+            LogEvent::itemCompletionFailed($itemId, $payload->completed, $e->sqlState());
+
+            throw $e;
+        }
+
+        LogEvent::itemCompletionChanged($item->id, $payload->completed);
 
         return $item;
     }

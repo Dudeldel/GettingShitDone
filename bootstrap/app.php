@@ -2,6 +2,7 @@
 
 use App\Exceptions\InvalidClarificationException;
 use App\Exceptions\InvalidCredentialsException;
+use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
@@ -59,6 +60,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(
             fn (ItemNotInInboxException $e) => response()->json(
                 ['message' => 'That item has already been clarified.'], Response::HTTP_CONFLICT,
+            ),
+        );
+        // The item exists and the verb exists; the two do not go together. 422 rather than
+        // 409: nothing is in conflict, the request simply named an action that is not legal
+        // where the item currently sits.
+        $exceptions->render(
+            fn (ItemActionNotAllowedException $e) => response()->json(
+                ['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY,
             ),
         );
         $exceptions->render(

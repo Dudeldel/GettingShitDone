@@ -87,6 +87,71 @@ class LogEvent
     }
 
     /**
+     * An item was moved to a different destination bucket (FR-010).
+     *
+     * Only the destination travels. The bucket it came FROM is deliberately not read before
+     * the write: fetching it would add a query whose answer could already be stale, and the
+     * previous bucket is recoverable anyway from this item's preceding item.clarified or
+     * item.refiled line. The log is a chain, not a set of independent facts.
+     *
+     * @param  int  $itemId  the item that moved
+     * @param  GtdBucket  $destination  where it now lives
+     */
+    public static function itemRefiled(int $itemId, GtdBucket $destination): void
+    {
+        self::emit('item.refiled.success', 'database', 'success', [
+            'item_id' => $itemId,
+            'bucket' => $destination->value,
+        ]);
+    }
+
+    /**
+     * A re-file could not be applied.
+     *
+     * @param  int  $itemId  the item that stayed put
+     * @param  GtdBucket  $destination  where it was meant to go
+     * @param  string  $reason  SQLSTATE, never a query or its bindings
+     */
+    public static function itemRefileFailed(int $itemId, GtdBucket $destination, string $reason): void
+    {
+        self::emit('item.refiled.failure', 'database', 'failure', [
+            'item_id' => $itemId,
+            'bucket' => $destination->value,
+            'reason' => $reason,
+        ], 'error');
+    }
+
+    /**
+     * An item was marked done, or un-marked.
+     *
+     * @param  int  $itemId  the item
+     * @param  bool  $completed  true when it was marked done, false when the mark was removed
+     */
+    public static function itemCompletionChanged(int $itemId, bool $completed): void
+    {
+        self::emit('item.completion.'.($completed ? 'marked' : 'cleared'), 'database', 'success', [
+            'item_id' => $itemId,
+            'completed' => $completed,
+        ]);
+    }
+
+    /**
+     * A completion change could not be applied.
+     *
+     * @param  int  $itemId  the item
+     * @param  bool  $completed  what was attempted
+     * @param  string  $reason  SQLSTATE, never a query or its bindings
+     */
+    public static function itemCompletionFailed(int $itemId, bool $completed, string $reason): void
+    {
+        self::emit('item.completion.failure', 'database', 'failure', [
+            'item_id' => $itemId,
+            'completed' => $completed,
+            'reason' => $reason,
+        ], 'error');
+    }
+
+    /**
      * The Trash was emptied (FR-004's destination, completed).
      *
      * The only irreversible operation in the product, so it gets a durable trace. The count

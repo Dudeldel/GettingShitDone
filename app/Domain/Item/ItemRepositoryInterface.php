@@ -5,6 +5,7 @@ namespace App\Domain\Item;
 use App\Domain\Clarify\ClarifyOutcome;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
@@ -42,13 +43,42 @@ interface ItemRepositoryInterface
     public function clarify(int $itemId, ClarifyOutcome $outcome): ItemDto;
 
     /**
+     * Move an already-clarified item into a different destination bucket (FR-010).
+     *
+     * A SEPARATE verb rather than a relaxed clarify, deliberately. The `where bucket = inbox`
+     * predicate on clarify() is what makes its guard unraceable, and it also writes
+     * completed_at => null — so reusing that path to re-file would erase the completion of a
+     * finished Next Action moved to Calendar. This method writes the bucket and nothing else.
+     *
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemActionNotAllowedException the item is still in the Inbox, so it wants clarify
+     * @throws ItemPersistenceException the write failed
+     */
+    public function refile(int $itemId, GtdBucket $destination): ItemDto;
+
+    /**
+     * Mark an item done, or un-mark it.
+     *
+     * A toggle rather than a one-way door: this product has exactly one irreversible
+     * operation (the Trash purge) and it is guarded by a confirmation. A single click should
+     * not create a second. Writes completed_at and nothing else — in particular never the
+     * bucket, so completing cannot move an item.
+     *
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemActionNotAllowedException the item is not in a bucket where done means anything
+     * @throws ItemPersistenceException the write failed
+     */
+    public function setCompleted(int $itemId, bool $completed): ItemDto;
+
+    /**
      * Permanently delete every item in the Trash, returning how many went.
      *
      * Takes NO arguments on purpose. A signature accepting an item id would be a generic
      * "delete this row" verb, and the moment one exists it becomes reachable from every
-     * bucket view — which is FR-010's re-filing semantics arriving by the back door, parked
-     * for v2. The Trash is the only place a permanent discard belongs (FR-004), so the
-     * operation is scoped to the bucket and cannot be aimed anywhere else.
+     * bucket view. FR-010's re-filing now has its own verb above, with its own guard and its
+     * own destination rule — which is precisely why this one must NOT become a generic
+     * "delete this row". The Trash is the only place a permanent discard belongs (FR-004), so
+     * the operation stays scoped to the bucket and cannot be aimed anywhere else.
      *
      * @return int the number of rows deleted; 0 is a success, not a failure
      *

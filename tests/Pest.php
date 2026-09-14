@@ -39,9 +39,11 @@ function makeLogRecord(array $context = [], array $extra = [], string $message =
  * test file: Pest loads every test into one process, so a duplicate file-scope function
  * name in a later slice is a fatal redeclaration, not a test failure.
  */
-function seedItem(string $title, GtdBucket $bucket): void
+function seedItem(string $title, GtdBucket $bucket): int
 {
-    app(ItemRepositoryInterface::class)->create(new CaptureItemPayload($title, null), $bucket);
+    return app(ItemRepositoryInterface::class)
+        ->create(new CaptureItemPayload($title, null), $bucket)
+        ->id;
 }
 
 /**
@@ -65,6 +67,14 @@ function fakeItemRepository(bool $failing = false)
         public ?ClarifyOutcome $clarifiedTo = null;
 
         public bool $trashEmptied = false;
+
+        public ?int $refiledItemId = null;
+
+        public ?GtdBucket $refiledTo = null;
+
+        public ?int $completedItemId = null;
+
+        public ?bool $completedTo = null;
 
         public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
         {
@@ -102,8 +112,50 @@ function fakeItemRepository(bool $failing = false)
                 createdAt: '2026-09-07T10:00:00+00:00',
                 updatedAt: '2026-09-07T10:00:00+00:00',
                 delegatedTo: $outcome->delegatedTo,
-                delegationDone: $outcome->delegatedTo === null ? null : false,
                 completedAt: $outcome->completed ? '2026-09-14T12:00:00+00:00' : null,
+            );
+        }
+
+        public function refile(int $itemId, GtdBucket $destination): ItemDto
+        {
+            if ($this->failing) {
+                throw new ItemPersistenceException('HY000');
+            }
+
+            $this->refiledItemId = $itemId;
+            $this->refiledTo = $destination;
+
+            return new ItemDto(
+                id: $itemId,
+                title: 'an idea',
+                note: null,
+                bucket: $destination,
+                createdAt: '2026-09-07T10:00:00+00:00',
+                updatedAt: '2026-09-14T12:00:00+00:00',
+                // A re-file must carry an existing completion across; the fake keeps one set
+                // so a service that dropped it would be visible here.
+                completedAt: '2026-09-14T11:00:00+00:00',
+            );
+        }
+
+        public function setCompleted(int $itemId, bool $completed): ItemDto
+        {
+            if ($this->failing) {
+                throw new ItemPersistenceException('HY000');
+            }
+
+            $this->completedItemId = $itemId;
+            $this->completedTo = $completed;
+
+            return new ItemDto(
+                id: $itemId,
+                title: 'an idea',
+                note: null,
+                // Unchanged by design: completing must never move an item.
+                bucket: GtdBucket::NextActions,
+                createdAt: '2026-09-07T10:00:00+00:00',
+                updatedAt: '2026-09-14T12:00:00+00:00',
+                completedAt: $completed ? '2026-09-14T12:00:00+00:00' : null,
             );
         }
 

@@ -5,6 +5,8 @@ use App\Domain\Clarify\TwoMinuteOutcome;
 use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
+use App\Dto\Payload\CompleteItemPayload;
+use App\Dto\Payload\RefileItemPayload;
 use App\Exceptions\ItemPersistenceException;
 use App\Services\ItemService;
 use Illuminate\Support\Facades\Log;
@@ -170,4 +172,52 @@ it('does not report a timer for an item filed by the quick-route', function () {
 
     Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.done', Mockery::any()]);
     Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.deferred', Mockery::any()]);
+});
+
+it('hands the destination to the repository and records the move', function () {
+    Log::spy();
+    $repo = fakeItemRepository();
+
+    $dto = (new ItemService($repo, new ClarifyDecision))
+        ->refile(7, RefileItemPayload::fromArray(['bucket' => 'calendar']));
+
+    expect($repo->refiledItemId)->toBe(7)
+        ->and($repo->refiledTo)->toBe(GtdBucket::Calendar)
+        // The fake returns a completed item, so a service that dropped the completion on the
+        // way out would show up here rather than only in an integration test.
+        ->and($dto->completedAt)->not->toBeNull();
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.refiled.success'
+            && $context['bucket'] === 'calendar',
+    );
+});
+
+it('records marking and clearing as different events', function () {
+    Log::spy();
+    $service = new ItemService(fakeItemRepository(), new ClarifyDecision);
+
+    $service->setCompleted(7, CompleteItemPayload::fromArray(['completed' => true]));
+    $service->setCompleted(7, CompleteItemPayload::fromArray(['completed' => false]));
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.completion.marked' && $context['completed'] === true,
+    );
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.completion.cleared' && $context['completed'] === false,
+    );
+});
+
+it('emits a failure event and rethrows when a re-file write fails', function () {
+    Log::spy();
+
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true), new ClarifyDecision))
+        ->refile(7, RefileItemPayload::fromArray(['bucket' => 'trash'])))
+        ->toThrow(ItemPersistenceException::class);
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $level === 'error'
+            && $message === 'item.refiled.failure'
+            && $context['reason'] === 'HY000',
+    );
 });

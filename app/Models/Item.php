@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
  *
  * The dormant metadata columns (due_date, tags, context, important, urgent) are cast but
  * deliberately NOT fillable: S-06/S-07 add their write paths together with validation.
- * The Delegation columns (delegated_to, delegation_done) are likewise not fillable —
+ * The Delegation column (delegated_to) is likewise not fillable —
  * clarify writes them through an explicit update, so no request array can reach them.
  * completed_at (FR-006) follows the same rule: only the clarify write path sets it.
  *
@@ -26,7 +26,6 @@ use Illuminate\Support\Carbon;
  * @property bool|null $important
  * @property bool|null $urgent
  * @property string|null $delegated_to
- * @property bool|null $delegation_done
  * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -45,7 +44,6 @@ class Item extends Model
             'tags' => 'array',
             'important' => 'boolean',
             'urgent' => 'boolean',
-            'delegation_done' => 'boolean',
             'completed_at' => 'datetime',
         ];
     }

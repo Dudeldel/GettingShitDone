@@ -66,7 +66,8 @@ it('routes a delegable item to Delegation and keeps the who/what note', function
     ])->assertStatus(Response::HTTP_OK)
         ->assertJsonPath('bucket', 'delegation')
         ->assertJsonPath('delegatedTo', 'Ania — sent the contract on Tuesday')
-        ->assertJsonPath('delegationDone', false);
+        // FR-007's done flag is completedAt now, shared with every other action bucket.
+        ->assertJsonPath('completedAt', null);
 
     test()->getJson('/api/items?bucket=delegation')
         ->assertStatus(Response::HTTP_OK)
