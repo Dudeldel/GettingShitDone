@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ClarifyController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItemController;
+use App\Http\Controllers\Api\V1\TrashController;
 use App\Http\Middleware\LogContextMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -27,4 +28,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', LogContextMiddleware::class])
     // Its own controller: a state-changing business operation, not another item verb.
     Route::post('/items/{itemId}/clarify', [ClarifyController::class, 'store'])
         ->whereNumber('itemId');
+
+    // The Trash as a resource: deleting it empties it. No route parameter, so the product's
+    // only irreversible operation cannot be aimed at a single item (see S-05 plan).
+    Route::delete('/trash', [TrashController::class, 'destroy']);
 });

@@ -40,4 +40,19 @@ interface ItemRepositoryInterface
      * @throws ItemPersistenceException the write itself failed
      */
     public function clarify(int $itemId, ClarifyOutcome $outcome): ItemDto;
+
+    /**
+     * Permanently delete every item in the Trash, returning how many went.
+     *
+     * Takes NO arguments on purpose. A signature accepting an item id would be a generic
+     * "delete this row" verb, and the moment one exists it becomes reachable from every
+     * bucket view — which is FR-010's re-filing semantics arriving by the back door, parked
+     * for v2. The Trash is the only place a permanent discard belongs (FR-004), so the
+     * operation is scoped to the bucket and cannot be aimed anywhere else.
+     *
+     * @return int the number of rows deleted; 0 is a success, not a failure
+     *
+     * @throws ItemPersistenceException the delete failed
+     */
+    public function emptyTrash(): int;
 }

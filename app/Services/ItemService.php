@@ -79,6 +79,28 @@ class ItemService
     }
 
     /**
+     * Permanently discard everything in the Trash.
+     *
+     * @return int how many items went; 0 is a success
+     *
+     * @throws ItemPersistenceException the delete failed
+     */
+    public function emptyTrash(): int
+    {
+        try {
+            $count = $this->items->emptyTrash();
+        } catch (ItemPersistenceException $e) {
+            LogEvent::trashEmptyFailed($e->sqlState());
+
+            throw $e;
+        }
+
+        LogEvent::trashEmptied($count);
+
+        return $count;
+    }
+
+    /**
      * @return Collection<int, ItemDto>
      */
     public function listByBucket(GtdBucket $bucket): Collection

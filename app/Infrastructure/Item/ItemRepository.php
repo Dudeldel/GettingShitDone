@@ -91,6 +91,19 @@ class ItemRepository implements ItemRepositoryInterface
             ->values();
     }
 
+    public function emptyTrash(): int
+    {
+        try {
+            // One statement, scoped to the bucket. Safe to repeat: a second call deletes
+            // nothing and returns 0.
+            return Item::query()
+                ->where('bucket', GtdBucket::Trash->value)
+                ->delete();
+        } catch (QueryException $e) {
+            throw new ItemPersistenceException((string) $e->getCode());
+        }
+    }
+
     private function toDto(Item $item): ItemDto
     {
         return new ItemDto(

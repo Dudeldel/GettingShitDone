@@ -64,6 +64,33 @@ class LogEvent
     }
 
     /**
+     * The Trash was emptied (FR-004's destination, completed).
+     *
+     * The only irreversible operation in the product, so it gets a durable trace. The count
+     * travels; the items' text never does.
+     *
+     * @param  int  $count  how many items were permanently discarded
+     */
+    public static function trashEmptied(int $count): void
+    {
+        self::emit('trash.emptied.success', 'database', 'success', [
+            'deleted_count' => $count,
+        ]);
+    }
+
+    /**
+     * The Trash could not be emptied.
+     *
+     * @param  string  $reason  SQLSTATE, never a query or its bindings
+     */
+    public static function trashEmptyFailed(string $reason): void
+    {
+        self::emit('trash.emptied.failure', 'database', 'failure', [
+            'reason' => $reason,
+        ], 'error');
+    }
+
+    /**
      * A capture could not be persisted (FR-001, guardrail "capture never loses an entry").
      *
      * @param  GtdBucket  $bucket  the intended destination

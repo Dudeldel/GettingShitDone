@@ -64,6 +64,8 @@ function fakeItemRepository(bool $failing = false)
 
         public ?ClarifyOutcome $clarifiedTo = null;
 
+        public bool $trashEmptied = false;
+
         public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
         {
             if ($this->failing) {
@@ -102,6 +104,17 @@ function fakeItemRepository(bool $failing = false)
                 delegatedTo: $outcome->delegatedTo,
                 delegationDone: $outcome->delegatedTo === null ? null : false,
             );
+        }
+
+        public function emptyTrash(): int
+        {
+            if ($this->failing) {
+                throw new ItemPersistenceException('HY000');
+            }
+
+            $this->trashEmptied = true;
+
+            return 3;
         }
 
         public function listByBucket(GtdBucket $bucket): Collection
