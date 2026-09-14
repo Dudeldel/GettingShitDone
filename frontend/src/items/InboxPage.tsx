@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { type Item, listItems } from '../api'
+import { messageFor } from '../apiMessage'
 import { useAuth } from '../auth/context'
 import { CaptureForm } from './CaptureForm'
 import { InboxList } from './InboxList'
@@ -33,7 +34,9 @@ export function InboxPage() {
       })
       .catch((e: unknown) => {
         if (!ignore) {
-          setLoadError(e instanceof Error ? e.message : String(e))
+          // Through the shared mapper, not e.message: the raw value is "Failed to fetch"
+          // or the literal "HTTP 500" — distinguishable, but not something to act on.
+          setLoadError(messageFor(e))
         }
       })
       .finally(() => {
@@ -82,7 +85,15 @@ export function InboxPage() {
       )}
       {/* A capture that already landed must stay visible even while the load is pending. */}
       {loadError === null && loading && items.length === 0 && <p>Loading…</p>}
-      {loadError === null && (!loading || items.length > 0) && <InboxList items={items} />}
+      {/* Two gates, not one. When the load failed, the list still renders anything already
+          captured — otherwise "Saved to your Inbox." sits above an Inbox the user cannot
+          see. But only when there IS something: rendering an empty list under an error
+          would print "Your Inbox is empty.", telling the user their data is gone when the
+          truth is we never managed to ask. A list that failed to load and a list that is
+          genuinely empty must never look the same. */}
+      {loadError === null
+        ? (!loading || items.length > 0) && <InboxList items={items} />
+        : items.length > 0 && <InboxList items={items} />}
     </main>
   )
 }

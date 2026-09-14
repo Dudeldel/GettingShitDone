@@ -643,30 +643,30 @@ behaviour and its own tests go with it.
 
 #### Automated
 
-- [x] 3.1 Frontend tests pass
-- [x] 3.2 Frontend build and lint pass
-- [x] 3.3 401 test proven able to fail without the fix
-- [x] 3.4 No sleep-based waits — grep confirms state-based waits only
+- [x] 3.1 Frontend tests pass — 4e3bbcb
+- [x] 3.2 Frontend build and lint pass — 4e3bbcb
+- [x] 3.3 401 test proven able to fail without the fix — 4e3bbcb
+- [x] 3.4 No sleep-based waits — grep confirms state-based waits only — 4e3bbcb
 
 #### Manual
 
-- [x] 3.5 Stop the API and submit — distinct actionable message, text preserved
-- [x] 3.6 Revoke the token and submit — login explains the expiry, text restored
+- [x] 3.5 Stop the API and submit — distinct actionable message, text preserved — 4e3bbcb
+- [x] 3.6 Revoke the token and submit — login explains the expiry, text restored — 4e3bbcb
 
 ### Phase 4: Inbox load failure and list visibility
 
 #### Automated
 
-- [ ] 4.1 Frontend tests pass
-- [ ] 4.2 Frontend build and lint pass
-- [ ] 4.3 Backend suite still green
-- [ ] 4.4 Merge guard proven able to fail by deliberate breakage
-- [ ] 4.5 Visibility test proven able to fail by deliberate breakage
+- [x] 4.1 Frontend tests pass
+- [x] 4.2 Frontend build and lint pass
+- [x] 4.3 Backend suite still green
+- [x] 4.4 Merge guard proven able to fail by deliberate breakage
+- [x] 4.5 Visibility test proven able to fail by deliberate breakage
 
 #### Manual
 
-- [ ] 4.6 Stop the API, reload, capture — item appears beside an actionable error
-- [ ] 4.7 API stopped, nothing captured — screen does not claim the Inbox is empty
+- [x] 4.6 Stop the API, reload, capture — item appears beside an actionable error
+- [x] 4.7 API stopped, nothing captured — screen does not claim the Inbox is empty
 
 ### Phase 5: Cookbook, contracts and test-plan backport
 

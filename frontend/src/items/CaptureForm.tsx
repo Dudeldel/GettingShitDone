@@ -1,5 +1,6 @@
 import { type FormEvent, useRef, useState } from 'react'
-import { ApiError, captureItem, type Item, TITLE_MAX_LENGTH } from '../api'
+import { captureItem, type Item, TITLE_MAX_LENGTH } from '../api'
+import { messageFor } from '../apiMessage'
 
 // The draft outlives the component on purpose. A 401 clears the token, flips the app to
 // logged-out and unmounts this form before the error can even paint — so state kept only
@@ -29,26 +30,6 @@ function writeDraft(value: string): void {
   }
 }
 
-function messageFor(err: unknown): string {
-  if (!(err instanceof ApiError)) {
-    return 'Could not reach the server. Your text is still here — try again.'
-  }
-
-  switch (err.status) {
-    // No 401 arm on purpose. A 401 logs the app out and unmounts this form in the same
-    // render, so a message set here is discarded before it can paint — the expiry is
-    // explained at the login screen instead (see AuthContext's sessionExpired). Code that
-    // claims to handle a case it cannot reach is how the original fix came to be recorded
-    // as done when it was not.
-    case 422:
-      // The backend writes these for the user; retrying unchanged would never work.
-      return err.message
-    case 429:
-      return 'Too many requests. Wait a moment and try again.'
-    default:
-      return err.message
-  }
-}
 
 export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }) {
   const [title, setTitle] = useState(readDraft)
@@ -93,7 +74,9 @@ export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }
       setSaved(true)
       onCaptured(item)
     } catch (err) {
-      setError(messageFor(err))
+      // The reassurance belongs here rather than in the shared mapper: it is only true
+      // on a screen that holds a draft. It now covers every failure, not just transport ones.
+      setError(`${messageFor(err)} Your text is still here.`)
     } finally {
       setSubmitting(false)
       inputRef.current?.focus()
