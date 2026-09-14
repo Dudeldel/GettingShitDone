@@ -628,30 +628,30 @@ behaviour and its own tests go with it.
 
 #### Automated
 
-- [x] 2.1 Frontend tests pass: `cd frontend && npm test`
-- [x] 2.2 Frontend build passes incl. `tsc -b` over test files
-- [x] 2.3 Frontend lint passes with no new config
-- [x] 2.4 Backend suite still green
-- [x] 2.5 An unhandled request fails the run
+- [x] 2.1 Frontend tests pass: `cd frontend && npm test` — 42383cb
+- [x] 2.2 Frontend build passes incl. `tsc -b` over test files — 42383cb
+- [x] 2.3 Frontend lint passes with no new config — 42383cb
+- [x] 2.4 Backend suite still green — 42383cb
+- [x] 2.5 An unhandled request fails the run — 42383cb
 
 #### Manual
 
-- [x] 2.6 `AbortSignal.timeout` probe outcome recorded and Phase 3 approach chosen
-- [x] 2.7 `npm test` works in a clean clone after `npm ci`
+- [x] 2.6 `AbortSignal.timeout` probe outcome recorded and Phase 3 approach chosen — 42383cb
+- [x] 2.7 `npm test` works in a clean clone after `npm ci` — 42383cb
 
 ### Phase 3: Capture error surfacing and the 401 explanation
 
 #### Automated
 
-- [ ] 3.1 Frontend tests pass
-- [ ] 3.2 Frontend build and lint pass
-- [ ] 3.3 401 test proven able to fail without the fix
-- [ ] 3.4 No sleep-based waits — grep confirms state-based waits only
+- [x] 3.1 Frontend tests pass
+- [x] 3.2 Frontend build and lint pass
+- [x] 3.3 401 test proven able to fail without the fix
+- [x] 3.4 No sleep-based waits — grep confirms state-based waits only
 
 #### Manual
 
-- [ ] 3.5 Stop the API and submit — distinct actionable message, text preserved
-- [ ] 3.6 Revoke the token and submit — login explains the expiry, text restored
+- [x] 3.5 Stop the API and submit — distinct actionable message, text preserved
+- [x] 3.6 Revoke the token and submit — login explains the expiry, text restored
 
 ### Phase 4: Inbox load failure and list visibility
 

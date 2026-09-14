@@ -4,6 +4,12 @@ import type { User } from '../api'
 export interface AuthContextValue {
   user: User | null
   isAuthenticated: boolean
+  /**
+   * True when the session ended because a request came back 401, rather than because the
+   * user logged out. A 401 unmounts whatever screen the user was on before any error can
+   * paint, so the explanation has to survive the bounce and surface at the login screen.
+   */
+  sessionExpired: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }

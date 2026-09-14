@@ -5,6 +5,8 @@ import { ApiError, captureItem, type Item, TITLE_MAX_LENGTH } from '../api'
 // logged-out and unmounts this form before the error can even paint — so state kept only
 // in useState would take the user's captured idea with it, breaking the PRD guardrail
 // "capture never loses an entry". Session storage also survives a refresh or a tab crash.
+// Scope is the tab session: a closed tab does lose the draft, which is a deliberate line
+// rather than an oversight — see the plan's "What We're NOT Doing".
 const DRAFT_KEY = 'gsd_capture_draft'
 
 function readDraft(): string {
@@ -33,8 +35,11 @@ function messageFor(err: unknown): string {
   }
 
   switch (err.status) {
-    case 401:
-      return 'Your session expired. Sign in again — your text is saved here.'
+    // No 401 arm on purpose. A 401 logs the app out and unmounts this form in the same
+    // render, so a message set here is discarded before it can paint — the expiry is
+    // explained at the login screen instead (see AuthContext's sessionExpired). Code that
+    // claims to handle a case it cannot reach is how the original fix came to be recorded
+    // as done when it was not.
     case 422:
       // The backend writes these for the user; retrying unchanged would never work.
       return err.message

@@ -4,12 +4,18 @@ import { AuthContext, type AuthContextValue } from './context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<api.User | null>(null)
+  const [sessionExpired, setSessionExpired] = useState(false)
   // Ready immediately when there's no token to rehydrate; otherwise wait for me().
   const [ready, setReady] = useState(() => api.getToken() === null)
 
   useEffect(() => {
-    // A 401 anywhere drops us back to logged-out.
-    api.setUnauthorizedHandler(() => setUser(null))
+    // A 401 anywhere drops us back to logged-out, and records why. The screen the user was
+    // on unmounts in the same render, so any message it sets is discarded — the reason has
+    // to live above the router to survive the bounce to /login.
+    api.setUnauthorizedHandler(() => {
+      setUser(null)
+      setSessionExpired(true)
+    })
 
     if (api.getToken() !== null) {
       api
@@ -26,10 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isAuthenticated: user !== null,
+      sessionExpired,
       login: async (email, password) => {
         const result = await api.login(email, password)
         api.setToken(result.token)
         setUser(result.user)
+        // Signing back in answers the notice, so it must not outlive the login.
+        setSessionExpired(false)
       },
       logout: async () => {
         try {
@@ -43,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [user],
+    [user, sessionExpired],
   )
 
   // Avoid a flash of the login screen while we rehydrate the session from storage.
