@@ -1,7 +1,7 @@
 ---
 change_id: item-metadata-and-calendar
 title: Item attributes, and what a date does to the Calendar bucket
-status: implementing
+status: implemented
 created: 2026-09-14
 updated: 2026-09-14
 archived_at: null

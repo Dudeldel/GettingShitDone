@@ -626,15 +626,15 @@ broken one.
 
 #### Automated
 
-- [x] 4.1 npm run build, npm run lint, npm run test pass
-- [x] 4.2 AttributesDialog tests cover render, submit, clear, field errors, fallback, Escape, tri-state
-- [x] 4.3 InboxList test covers Edit button present outside Trash and absent within
-- [x] 4.4 BucketPage tests cover splice-on-save and focus restore
-- [x] 4.5 Deliberate breakage pass: aria-invalid and full-replacement each redden
+- [x] 4.1 npm run build, npm run lint, npm run test pass — c892f56
+- [x] 4.2 AttributesDialog tests cover render, submit, clear, field errors, fallback, Escape, tri-state — c892f56
+- [x] 4.3 InboxList test covers Edit button present outside Trash and absent within — c892f56
+- [x] 4.4 BucketPage tests cover splice-on-save and focus restore — c892f56
+- [x] 4.5 Deliberate breakage pass: aria-invalid and full-replacement each redden — c892f56
 
 #### Manual
 
-- [x] 4.6 End-to-end edit updates the row without a page reload
-- [x] 4.7 Setting a date surfaces the item in Calendar; clearing it removes the item
-- [x] 4.8 Keyboard-only operation with focus returning to the Edit button
-- [x] 4.9 Invalid date shows an error under the date field, not a generic banner
+- [x] 4.6 End-to-end edit updates the row without a page reload — c892f56
+- [x] 4.7 Setting a date surfaces the item in Calendar; clearing it removes the item — c892f56
+- [x] 4.8 Keyboard-only operation with focus returning to the Edit button — c892f56
+- [x] 4.9 Invalid date shows an error under the date field, not a generic banner — c892f56
