@@ -421,12 +421,12 @@ migration plus reverting the slice.
 
 #### Automated
 
-- [x] 3.1 Frontend tests pass
-- [x] 3.2 Frontend build and lint pass
-- [x] 3.3 Backend suite still green
-- [x] 3.4 Wizard test proven able to fail by deliberate breakage
+- [x] 3.1 Frontend tests pass — 1e7a196
+- [x] 3.2 Frontend build and lint pass — 1e7a196
+- [x] 3.3 Backend suite still green — 1e7a196
+- [x] 3.4 Wizard test proven able to fail by deliberate breakage — 1e7a196
 
 #### Manual
 
-- [x] 3.5 Each branch routes to the right bucket, verified end to end
-- [x] 3.6 A clarified item disappears from the Inbox list
+- [x] 3.5 Each branch routes to the right bucket, verified end to end — 1e7a196
+- [x] 3.6 A clarified item disappears from the Inbox list — 1e7a196
