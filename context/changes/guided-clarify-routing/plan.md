@@ -393,29 +393,29 @@ migration plus reverting the slice.
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly on a fresh database
-- [x] 1.2 Unit tests pass
-- [x] 1.3 Full backend suite passes
-- [x] 1.4 Larastan level 6 clean
-- [x] 1.5 Pint clean
-- [x] 1.6 Branch-matrix test proven able to fail by deliberate breakage
+- [x] 1.1 Migration applies cleanly on a fresh database — 92ae0b1
+- [x] 1.2 Unit tests pass — 92ae0b1
+- [x] 1.3 Full backend suite passes — 92ae0b1
+- [x] 1.4 Larastan level 6 clean — 92ae0b1
+- [x] 1.5 Pint clean — 92ae0b1
+- [x] 1.6 Branch-matrix test proven able to fail by deliberate breakage — 92ae0b1
 
 #### Manual
 
-- [x] 1.7 Decision table matches PRD FR-004/005/007/008 read side by side
+- [x] 1.7 Decision table matches PRD FR-004/005/007/008 read side by side — 92ae0b1
 
 ### Phase 2: HTTP edge
 
 #### Automated
 
-- [ ] 2.1 Item feature tests pass
-- [ ] 2.2 Full backend quality gate passes
-- [ ] 2.3 Scramble export succeeds
-- [ ] 2.4 Transition test proven able to fail by deliberate breakage
+- [x] 2.1 Item feature tests pass
+- [x] 2.2 Full backend quality gate passes
+- [x] 2.3 Scramble export succeeds
+- [x] 2.4 Transition test proven able to fail by deliberate breakage
 
 #### Manual
 
-- [ ] 2.5 Tree path and quick-route both behave as documented
+- [x] 2.5 Tree path and quick-route both behave as documented
 
 ### Phase 3: The clarify wizard
 

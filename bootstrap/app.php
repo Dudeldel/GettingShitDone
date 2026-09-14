@@ -1,6 +1,9 @@
 <?php
 
+use App\Exceptions\InvalidClarificationException;
 use App\Exceptions\InvalidCredentialsException;
+use App\Exceptions\ItemNotFoundException;
+use App\Exceptions\ItemNotInInboxException;
 use App\Exceptions\ItemPersistenceException;
 use App\Exceptions\RegistrationClosedException;
 use App\Http\Middleware\AssignRequestId;
@@ -43,6 +46,24 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (ItemPersistenceException $e) => response()->json(
                 ['message' => 'The item could not be saved. Please try again.'],
                 Response::HTTP_INTERNAL_SERVER_ERROR,
+            ),
+        );
+        // The clarify failures, each a distinct thing the client must handle differently.
+        // 404 and 409 must stay apart: a client that confuses "no such item" with "already
+        // clarified" will retry forever. Re-filing a bucketed item is FR-010, deferred to v2.
+        $exceptions->render(
+            fn (ItemNotFoundException $e) => response()->json(
+                ['message' => 'That item no longer exists.'], Response::HTTP_NOT_FOUND,
+            ),
+        );
+        $exceptions->render(
+            fn (ItemNotInInboxException $e) => response()->json(
+                ['message' => 'That item has already been clarified.'], Response::HTTP_CONFLICT,
+            ),
+        );
+        $exceptions->render(
+            fn (InvalidClarificationException $e) => response()->json(
+                ['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY,
             ),
         );
     })->create();
