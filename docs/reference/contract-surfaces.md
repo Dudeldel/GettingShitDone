@@ -56,7 +56,8 @@ that delegate here.
 ## CI gates (.github/workflows/ci.yml)
 
 Backend job: Pint (format) → Larastan level 6 → Pest (`--parallel`, SQLite `:memory:`).
-Frontend job: `npm ci` → lint → build. All must pass before merge.
+Frontend job: `npm ci` → lint → build → `npm test` (Vitest, blocking since the §3 Phase 1
+test rollout). All must pass before merge.
 
 ## Auth endpoints
 
@@ -93,6 +94,17 @@ it only runs once a user is resolved. Closes the F-03 observability remainder.
 `ProtectedRoute`. Token stored in `localStorage` under key `gsd_token`; `api.ts` injects
 `Authorization: Bearer` and clears the token + signals logout on any 401. `VITE_API_BASE_URL`
 sets the API origin; CORS on the backend must allow the SPA origin (`FRONTEND_URL`).
+
+`AuthContextValue.sessionExpired` records **why** the session ended: the 401 handler sets it
+alongside `setUser(null)`, and a successful `login` clears it. `LoginPage` reads it to explain
+the bounce. It lives on the provider, above the router, precisely because the screen the user
+was on unmounts in the same render — see "Frontend capture draft". Do not move this state into
+a screen component; it would be destroyed by the navigation it exists to explain.
+
+`frontend/src/AppRoutes.tsx` holds the route tree, extracted from `main.tsx` so tests can mount
+the real composition. The 401 behaviour only reproduces when `ProtectedRoute` can actually swap
+`<Outlet />` for `<Navigate />`, so a test that renders a screen in isolation proves nothing
+about it.
 
 ## login rate limiter
 
@@ -169,6 +181,49 @@ leaked-token caller; it does not shield the token lookup from an unauthenticated
 `gsd_capture_draft` on every change and cleared only after a confirmed 201. This exists because a
 401 clears the token, flips the app to logged-out and unmounts the form before an error can paint;
 without the draft the typed idea would be lost, breaking the PRD guardrail "capture never loses an
-entry". Do not remove it without replacing the guarantee. `frontend/src/items/InboxPage.tsx` is the
-`/` screen (named export, replaced the scaffold `App`); its load effect merges by id rather than
-replacing, so a capture landing mid-load is not erased.
+entry". Do not remove it without replacing the guarantee. Scope is the **tab session**: it survives
+the 401 bounce, an explicit logout, a refresh and a tab crash, but not a closed tab — a deliberate
+line, not an oversight. Because the form cannot paint its own 401 message, the explanation lives on
+`AuthContextValue.sessionExpired` and surfaces at the login screen; `messageFor` deliberately has
+no 401 arm.
+
+`frontend/src/items/InboxPage.tsx` is the `/` screen (named export, replaced the scaffold `App`);
+its load effect merges by id rather than replacing, so a capture landing mid-load is not erased.
+Its list renders under **two** gates, not one: when the load failed the list still appears if it
+holds anything, so a confirmed capture stays visible — but not when it is empty, because an empty
+list under an error prints "Your Inbox is empty." and tells the user their data is gone when the
+truth is the request never succeeded. A list that failed to load and a list that is genuinely
+empty must never look the same. Both mistakes are pinned by separate tests in
+`InboxPage.test.tsx`.
+
+`frontend/src/apiMessage.ts` — `messageFor(err)` maps a failed request to something a user can act
+on, shared by both screens. Deliberately context-neutral: the capture screen appends its own draft
+reassurance, which would be meaningless on a list that failed to load. Never render a raw
+`err.message` to the user — that is how "Failed to fetch" and the literal "HTTP 500" reached the
+Inbox screen.
+
+## Frontend test harness
+
+`frontend/` — Vitest 5 + jsdom + React Testing Library + MSW, added by the §3 Phase 1 test
+rollout. `npm test` (`vitest run`) is a **blocking CI gate**, run after lint and build in the
+frontend job.
+
+- Config lives in `vite.config.ts`'s `test` block, not a separate `vitest.config.ts`, so the
+  plugin/resolve setup the app builds with is the one tests run against.
+- `src/test/server.ts` exports the MSW `server` plus happy-path handlers and a `makeItem`
+  factory mirroring `ItemDto`; `src/test/setup.ts` owns the lifecycle and listens with
+  `onUnhandledRequest: 'error'` — a forgotten handler fails the test instead of reaching the
+  network. It also clears `localStorage`/`sessionStorage` between tests, since both outlive a
+  component.
+- Tests are colocated in `src` and use **explicit `vitest` imports**, not `globals: true`.
+  That is why `tsconfig.app.json` needs no `types` entry and `eslint.config.js` needs no
+  test-file block. `tsc -b` type-checks test files under `strict`, so a type error in a test
+  fails `npm run build`.
+- Mock at the network layer, never by stubbing global `fetch`: `api.ts` depends on real
+  `Response` semantics and on a rejection named `TimeoutError`, which a hand-rolled stub can
+  only imitate.
+- Order async work with handler resolution (`gatedListHandler` in `InboxPage.test.tsx`), never
+  a sleep.
+
+Full conventions: `context/foundation/test-plan.md` §6.3; the jsdom `AbortSignal.timeout`
+realm caveat is recorded in §6.6.

@@ -83,7 +83,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | planned | `context/changes/testing-capture-durability/` |
+| 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | implemented | `context/changes/testing-capture-durability/` |
 | 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | not started | — |
 | 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
 | 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | not started | — |
@@ -107,8 +107,8 @@ The classic test base for this project. AI-native tools (if any) carry a
 | unit + integration (backend) | Pest | ^4.7 | with `pest-plugin-laravel` ^4.1; `RefreshDatabase` applies to the Feature suite only, SQLite in-memory |
 | static analysis | Larastan | ^3.10 | level 6, enforced in CI |
 | format | Pint | ^1.27 | `--test` in CI |
-| unit + component (frontend) | none yet — see §3 Phase 1 | — | `frontend/src` holds 9 TS/TSX files and zero tests; runner choice belongs to Phase 1 research |
-| API / transport mocking | none yet — see §3 Phase 1 | — | needed for the failure and 401 paths in Risk #2; tool choice belongs to Phase 1 research |
+| unit + component (frontend) | Vitest + React Testing Library | vitest 5.0.0, @testing-library/react 16.3.3, jsdom 30.0.1 | landed in §3 Phase 1; one config (`vite.config.ts`), tests colocated in `src`, explicit `vitest` imports rather than `globals: true`; checked: 2026-09-14 |
+| API / transport mocking | MSW (node) | 2.15.0 | intercepts at the network layer so real `Response` semantics and the real abort plumbing stay in play; `onUnhandledRequest: 'error'`. A `fetch` stub was rejected as the §2 Risk #2 anti-pattern; checked: 2026-09-14 |
 | e2e | none yet — see §3 Phase 4 | — | Pest 4 already ships Playwright-backed browser testing, but the SPA is a separate origin not served by Laravel; standalone Playwright vs the Pest plugin is a Phase 4 research decision |
 | visual diff | none yet — see §3 Phase 4 | — | deterministic only, per §1 principle 1 |
 | (optional) AI-native | Playwright MCP — checked: 2026-09-14 | n/a | available in-session; use for exploratory diagnosis, not as a test layer — a deterministic diff already covers Risk #5 |
@@ -133,7 +133,7 @@ phase lands; before that, the gate is planned.
 | backend unit + integration (Pest) | local + CI | required | logic regressions |
 | per-edit lint hook | local (agent loop) | required | formatting and trivial errors at edit time |
 | per-edit typecheck hook | local (agent loop) | required | type drift at edit time |
-| frontend unit + component | local + CI | required after §3 Phase 1 | client-side error handling and state regressions |
+| frontend unit + component | local + CI | **required** (enforced since §3 Phase 1) | client-side error handling and state regressions |
 | log-redaction assertion | CI | required after §3 Phase 2 | captured text leaking into log records |
 | e2e on the capture-to-Inbox flow | CI on PR | required after §3 Phase 4 | a broken north-star path |
 | deterministic visual diff | CI on PR | optional after §3 Phase 4 | rendering and layout regressions |
@@ -160,9 +160,41 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.3 Adding a frontend component test
 
-- TBD — see §3 Phase 1. This is where the runner, the transport-mocking
-  policy, and the pattern for asserting the failure and 401 paths of
-  Risk #2 will be recorded.
+- **Location**: colocated — `src/items/CaptureForm.test.tsx` sits beside
+  `CaptureForm.tsx`. `tsconfig.app.json` has `"include": ["src"]`, so `tsc -b`
+  type-checks test files under `strict`: a type error in a test fails
+  `npm run build`, which is intended.
+- **Imports**: import `describe` / `it` / `expect` / `vi` explicitly from
+  `vitest`. Do **not** enable `globals: true` — explicit imports are why this
+  layer needed no `types` entry in `tsconfig.app.json` and no new block in
+  `eslint.config.js`.
+- **Run locally**: `cd frontend && npm test` (or `npm run test:watch`).
+- **Mocking policy — MSW, never a `fetch` stub.** `src/test/server.ts` owns the
+  handlers; `src/test/setup.ts` owns the lifecycle and listens with
+  `onUnhandledRequest: 'error'`, so a test that forgets a handler fails loudly
+  instead of reaching the network. Override one route per test with
+  `server.use(...)`. A hand-rolled `fetch` stub would have to fake `status`,
+  `ok` and `json()`, and would assert what we *believe* a `Response` does — the
+  §2 Risk #2 anti-pattern.
+- **Ordering**: control it with handler resolution (a promise the test releases),
+  never a sleep. See the `gatedListHandler` helper in
+  `src/items/InboxPage.test.tsx`.
+- **Mount the real shell when the behaviour needs it.** The 401 path only
+  reproduces when `ProtectedRoute` can actually swap `<Outlet />` for
+  `<Navigate />`, so `src/items/CaptureForm.401.test.tsx` renders `AppRoutes`
+  inside `AuthProvider` — the same composition `main.tsx` uses. A test that
+  mounted `CaptureForm` alone would pass against the broken code.
+- **Assert distinguishability, not copy.** For error paths, assert that each
+  failure reads differently and is actionable (see the "gives every failure a
+  different message" test), not that it equals a particular string. Snapshotting
+  an error string is an explicit anti-pattern for Risk #2.
+- **Reference tests**: `src/items/CaptureForm.test.tsx` (failure matrix, draft
+  survival, confirmation), `src/items/CaptureForm.401.test.tsx` (full app shell),
+  `src/items/InboxPage.test.tsx` (async ordering, load-failure states),
+  `src/items/InboxList.test.tsx` (simplest possible starting point).
+- **Prove it can fail.** Every test added in Phase 1 was verified by deliberate
+  breakage before being accepted. This is not optional ceremony: the archived
+  `ph2 F2` finding was a test that could not fail.
 
 ### 6.4 Adding a test for a new API endpoint
 
@@ -182,7 +214,36 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.6 Per-rollout-phase notes
 
-(Filled in by each phase as it lands.)
+**Phase 1 — Capture durability and error surfacing** (landed 2026-09-14;
+`5d6341f`, `42383cb`, `4e3bbcb`, `cc8f5e5`).
+
+- **The durability oracle is a second HTTP request, not a fresh session.** Under
+  `RefreshDatabase` + SQLite `:memory:` the write is rolled back and the database
+  dies with the connection, so a literal fresh session is unreachable. A second
+  request still proves the real read path, a fresh request lifecycle and freshly
+  resolved services (`AppServiceProvider` binds, never singletons). It does not
+  prove commit-to-disk; that is out of reach at this layer and not worth chasing
+  for a single-instance deployment.
+- **Force a backend write failure with a unique index, not `Schema::drop`.**
+  Dropping the table also breaks the follow-up read, so the "failed write leaves
+  nothing readable" assertion cannot run. Adding a unique index and capturing the
+  same title twice raises a real `QueryException` through the real repository
+  while leaving the table readable.
+- **`AbortSignal.timeout` under jsdom: the rejection is named `TimeoutError` but
+  is NOT `instanceof DOMException`** — jsdom installs its own `DOMException`
+  global while the rejection originates in Node's realm. `api.ts` therefore
+  matches on `name`, not `instanceof`; a browser has one realm so its behaviour
+  is unchanged. Checked on jsdom 30 / Node 22 local and Node 20 CI: 2026-09-14.
+  Re-verify if the DOM environment or Node major changes.
+- **The timeout test costs ~10s** because it waits out the real
+  `REQUEST_TIMEOUT_MS`. It is paid once, in
+  `src/test/abort-signal.probe.test.ts`, rather than per failure case. If the
+  frontend suite ever needs to get faster, making that timeout injectable is the
+  lever.
+- **Known gap, deliberately not widened**: `api.ts`'s `getToken()` reads
+  `localStorage` without a `try/catch`, so an environment that blocks site data
+  entirely would throw before any request is sent. Narrow (ordinary private mode
+  still provides storage) and out of Phase 1's scope.
 
 ## 7. What We Deliberately Don't Test
 
@@ -204,7 +265,8 @@ contributors should respect these unless the underlying assumption changes.
   guidance corrected from `context/changes/testing-capture-durability/research.md`:
   churn figures were file-touches not commits, the "fresh session" oracle is unreachable
   under `RefreshDatabase`, and the failure-path domain event is already covered)
-- Stack versions last verified: 2026-09-14
+- Stack versions last verified: 2026-09-14 (frontend rows are now installed and running,
+  not projected: vitest 5.0.0, jsdom 30.0.1, msw 2.15.0, @testing-library/react 16.3.3)
 - AI-native tool references last verified: 2026-09-14
 
 Refresh (`/10x-test-plan --refresh`) when:

@@ -657,26 +657,26 @@ behaviour and its own tests go with it.
 
 #### Automated
 
-- [x] 4.1 Frontend tests pass
-- [x] 4.2 Frontend build and lint pass
-- [x] 4.3 Backend suite still green
-- [x] 4.4 Merge guard proven able to fail by deliberate breakage
-- [x] 4.5 Visibility test proven able to fail by deliberate breakage
+- [x] 4.1 Frontend tests pass — cc8f5e5
+- [x] 4.2 Frontend build and lint pass — cc8f5e5
+- [x] 4.3 Backend suite still green — cc8f5e5
+- [x] 4.4 Merge guard proven able to fail by deliberate breakage — cc8f5e5
+- [x] 4.5 Visibility test proven able to fail by deliberate breakage — cc8f5e5
 
 #### Manual
 
-- [x] 4.6 Stop the API, reload, capture — item appears beside an actionable error
-- [x] 4.7 API stopped, nothing captured — screen does not claim the Inbox is empty
+- [x] 4.6 Stop the API, reload, capture — item appears beside an actionable error — cc8f5e5
+- [x] 4.7 API stopped, nothing captured — screen does not claim the Inbox is empty — cc8f5e5
 
 ### Phase 5: Cookbook, contracts and test-plan backport
 
 #### Automated
 
-- [ ] 5.1 Full backend quality gate passes: `php composer.phar quality`
-- [ ] 5.2 Frontend lint, build and test pass
-- [ ] 5.3 No "TBD" left in test-plan §6.3
+- [x] 5.1 Full backend quality gate passes: `php composer.phar quality`
+- [x] 5.2 Frontend lint, build and test pass
+- [x] 5.3 No "TBD" left in test-plan §6.3
 
 #### Manual
 
-- [ ] 5.4 A fresh reader can add a frontend component test from §6.3 alone
-- [ ] 5.5 §2 Source cells no longer cite churn figures pointing at deleted files
+- [x] 5.4 A fresh reader can add a frontend component test from §6.3 alone
+- [x] 5.5 §2 Source cells no longer cite churn figures pointing at deleted files
