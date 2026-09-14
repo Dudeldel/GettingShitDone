@@ -1,10 +1,10 @@
 ---
 change_id: visual-design-pass
 title: Make the UI read as a considered product, not a scaffold
-status: impl_reviewed
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T15:34:08Z
 ---
 
 ## Notes

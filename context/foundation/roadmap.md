@@ -41,7 +41,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | proposed |
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
-| S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | in-progress |
+| S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | done |
 | S-11 | refile-between-buckets     | move an already-bucketed item into a different bucket             | S-02, S-05    | FR-010 (v2, promoted)             | proposed |
 | S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap, see S-12          | proposed |
 
@@ -298,7 +298,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   pass with no visual regression gate can silently break working screens, and the h1 bug is
   the proof that it already has. Scope control matters as much: this must not become a
   rewrite of the components' behaviour.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-11: Re-file an item into another bucket
 
@@ -399,3 +399,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: user can start guided clarify on an Inbox item, answer the decision-tree questions one at a time, and have the item land in exactly one bucket (Trash / Someday-Maybe / Reference / Next Actions / Delegation).** — Archived 2026-09-14 → `context/archive/2026-09-14-guided-clarify-routing/`. Lesson: —.
 - **S-05: user can open and view the items in each of the 8 GTD buckets (Inbox, Next Actions, Projects, Calendar/Dates, Delegation, Someday/Maybe, Reference, Trash), and permanently discard what sits in the Trash ("empty the Trash").** — Archived 2026-09-14 → `context/archive/2026-09-14-eight-bucket-views/`. Lesson: —.
 - **S-03: during clarify, a "< 2 min" item triggers a 2-minute timer; "done" marks it complete, "need more time" loops the timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-two-minute-rule-timer/`. Lesson: —.
+- **S-10: user sees an interface that reads as a considered product — a real visual hierarchy, an accent that means something, a visible focus treatment, and no layout defects — instead of the unstyled scaffold the feature slices have been building on.** — Archived 2026-09-14 → `context/archive/2026-09-14-visual-design-pass/`. Lesson: —.
