@@ -100,10 +100,10 @@ folder.
 
 #### Automated
 
-- [x] 1.1 Pest suite passes unchanged
-- [x] 1.2 test-plan.md §3 shows Phase 3 complete with its change folder
-- [x] 1.3 §6.6 carries a Phase 3 note naming the residual risk and both rejected alternatives
+- [x] 1.1 Pest suite passes unchanged — d48c2c6
+- [x] 1.2 test-plan.md §3 shows Phase 3 complete with its change folder — d48c2c6
+- [x] 1.3 §6.6 carries a Phase 3 note naming the residual risk and both rejected alternatives — d48c2c6
 
 #### Manual
 
-- [x] 1.4 The note alone explains why no race test exists and what would change that
+- [x] 1.4 The note alone explains why no race test exists and what would change that — d48c2c6
