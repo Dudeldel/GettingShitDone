@@ -80,7 +80,10 @@ export function InboxPage() {
       <CaptureForm onCaptured={(item) => setItems((current) => [item, ...current])} />
 
       {editing !== null && (
+        // key: see the note in BucketPage — the panel's fields are seeded on mount, so
+        // switching rows without a remount would carry the previous item's values over.
         <AttributesDialog
+          key={editing.id}
           item={editing}
           onSaved={(updated) => {
             setItems((current) => current.map((i) => (i.id === updated.id ? updated : i)))

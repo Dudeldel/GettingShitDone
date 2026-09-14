@@ -290,7 +290,16 @@ export function BucketPage() {
       )}
 
       {editing !== null && (
-        <AttributesDialog item={editing} onSaved={handleSaved} onCancel={closeEdit} />
+        // key, so switching Edit from one row to another REMOUNTS the panel. Its fields are
+        // seeded with useState from the item, which only runs on mount — without this React
+        // reuses the instance, the heading updates to the new item while the inputs keep the
+        // previous one's values, and saving writes those onto the new item's id.
+        <AttributesDialog
+          key={editing.id}
+          item={editing}
+          onSaved={handleSaved}
+          onCancel={closeEdit}
+        />
       )}
 
       {refiling !== null && (

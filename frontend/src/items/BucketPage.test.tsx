@@ -805,4 +805,38 @@ describe('editing an item from a bucket view', () => {
       /no longer on the calendar/,
     )
   })
+
+  it('does not carry one item\'s values into the editor for another', async () => {
+    // A found-in-review defect, kept as a regression test. The panel seeds its fields with
+    // useState, which runs only on mount, and every row's Edit button stays live while it is
+    // open. Without a key React reuses the instance: the heading follows the new item while
+    // the inputs keep the old one's values, and Save writes those onto the new item's id —
+    // silent cross-item corruption with no error anywhere.
+    listOnlyFor('next_actions', [
+      makeItem({ id: 1, title: 'item A', bucket: 'next_actions', context: '@AAA' }),
+      makeItem({ id: 2, title: 'item B', bucket: 'next_actions', context: '@BBB' }),
+    ])
+    const sent: { id?: string; body?: Record<string, unknown> } = {}
+    server.use(
+      http.post('*/api/items/:id/attributes', async ({ params, request }) => {
+        sent.id = String(params.id)
+        sent.body = (await request.json()) as Record<string, unknown>
+
+        return HttpResponse.json(makeItem({ id: Number(params.id), bucket: 'next_actions' }))
+      }),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await user.click(await screen.findByRole('button', { name: 'Edit "item A"' }))
+    expect(screen.getByLabelText('Context')).toHaveValue('@AAA')
+
+    // Switch rows WITHOUT closing: this is the path that reuses the instance.
+    await user.click(screen.getByRole('button', { name: 'Edit "item B"' }))
+    expect(screen.getByLabelText('Context')).toHaveValue('@BBB')
+
+    // And the write must carry B's values to B, not A's.
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(sent.id).toBe('2'))
+    expect(sent.body?.context).toBe('@BBB')
+  })
 })

@@ -408,6 +408,25 @@ bucket — otherwise it reads as a bug.
 (via the existing `bucketLabel`), and the empty-state message names the rule ("items you file here,
 plus anything actionable with a date"). No new component — a variant of the existing page.
 
+#### 4. Integration fixes the derived view made necessary (added during implementation)
+
+**Files**: `frontend/src/items/BucketPage.tsx`, `frontend/src/items/buckets.ts`
+
+**Intent**: Phase 2 broke a coincidence the UI had been relying on. Until the Calendar view was
+derived, the page's bucket and a row's own bucket were always the same value, so code could use
+either. On Calendar they now differ for most rows, and two places were silently wrong as a result.
+Neither was foreseen in the plan; both were found and fixed while building this phase.
+
+**Contract**: three changes. `RefileDialog` receives `currentBucket={refiling.bucket}` — the ITEM's
+bucket, not the page's — so it no longer hides Calendar (a legal move) and offers the bucket the
+item is already in. `handleRefiled` keeps a re-filed row on screen when it still qualifies for the
+Calendar view, instead of filtering every moved row out unconditionally and disagreeing with the
+server. And a new `showsOnCalendar(item)` helper in `buckets.ts` mirrors the server's derived
+predicate, documented with `ItemRepository::listCalendar()` named as the authority — the same way
+`isActionBucket()` already documents its own copy — so the decision needs no refetch.
+
+Each carries its own test and its own deliberate-breakage verification.
+
 ### Success Criteria:
 
 #### Automated Verification:
