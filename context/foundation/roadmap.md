@@ -42,7 +42,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
 | S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | done |
-| S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | in-progress |
+| S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | done        |
 | S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap                    | absorbed by S-11 |
 
 ## Streams
@@ -344,7 +344,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   blocks it, the same `completed_at => null` write can erase it, and it needs the same thing in
   the UI that does not exist yet — a per-row action in a bucket view, which S-05 deliberately
   left out so a generic delete verb could not arrive by the back door.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-12: Mark an item done outside the two-minute timer
 
@@ -406,3 +406,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: user can open and view the items in each of the 8 GTD buckets (Inbox, Next Actions, Projects, Calendar/Dates, Delegation, Someday/Maybe, Reference, Trash), and permanently discard what sits in the Trash ("empty the Trash").** — Archived 2026-09-14 → `context/archive/2026-09-14-eight-bucket-views/`. Lesson: —.
 - **S-03: during clarify, a "< 2 min" item triggers a 2-minute timer; "done" marks it complete, "need more time" loops the timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-two-minute-rule-timer/`. Lesson: —.
 - **S-10: user sees an interface that reads as a considered product — a real visual hierarchy, an accent that means something, a visible focus treatment, and no layout defects — instead of the unstyled scaffold the feature slices have been building on.** — Archived 2026-09-14 → `context/archive/2026-09-14-visual-design-pass/`. Lesson: —.
+- **S-11: user can act on an item that has already left the Inbox — move it into a different bucket (Someday/Maybe into Next Actions when it becomes real, a mis-filed item into where it belongs), and mark it done without having done it inside a two-minute timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-item-actions-after-clarify/`. Lesson: —.
