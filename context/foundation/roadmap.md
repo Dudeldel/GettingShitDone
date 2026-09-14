@@ -41,6 +41,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | proposed |
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
+| S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | proposed |
 
 ## Streams
 
@@ -291,6 +292,44 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **External integrations (calendar / email / third-party)** — Why parked: PRD Non-Goal in MVP.
 - **OAuth + passwordless magic link; ESP32 hardware "catch" channel** — Why parked: PRD Access Control / shape-notes forward block; beyond the email+password MVP.
 - **Multi-user / sharing** — Why parked: PERMANENT non-goal (PRD). Never roadmapped.
+
+### S-10: A visual design the product deserves
+
+- **Outcome:** user sees an interface that reads as a considered product — a real visual
+  hierarchy, an accent that means something, working light/dark, and no layout defects —
+  instead of the unstyled scaffold the feature slices have been building on.
+- **Change ID:** visual-design-pass
+- **PRD refs:** none. The PRD is silent on visual design: it commits no NFR for it, and its
+  only adjacent line defers "list-view responsiveness" as an uncommitted Open Question owned
+  by the user. So unlike every slice before it, this one's acceptance bar cannot be derived
+  from the spec — it has to be agreed before planning, or the slice has no definition of done.
+- **Prerequisites:** S-01, S-02, S-05 (the screens to be designed must exist first — they now do)
+- **Parallel with:** S-06, S-07, S-09 — different surface, but it will touch every component
+  file, so running it concurrently with a feature slice means constant merge conflicts.
+- **Blockers:** —
+- **Unknowns:**
+  - What "looks designed" means here, concretely enough to accept or reject a result. Owner:
+    user. Block: **yes** — this is the slice's whole definition of done.
+  - Whether to adopt a styling approach (CSS modules, a token layer, a utility framework) or
+    keep hand-written CSS. 49 inline `style={{}}` across 8 components is the status quo, and
+    it has no story for hover, focus, breakpoints or transitions — none of which an inline
+    style can express. Owner: user. Block: no.
+- **Risk:** The measured starting point, not an impression: the 109-line stylesheet is
+  inherited from the Vite starter and still carries rules for elements this app does not have
+  (`#social .button-icon`, `.counter`). Of its 16 design tokens, **five are defined and never
+  referenced anywhere** — `--accent`, `--accent-bg`, `--accent-border`, `--shadow`,
+  `--social-bg` — so the app has no accent colour and no elevation at all. `--muted` is
+  referenced six times but is byte-identical to `--text` in both themes, so every
+  de-emphasised timestamp and empty-state message renders exactly like body text: the
+  hierarchy the code believes it has does not exist on screen. And `:root { font: 18px/145% }`
+  makes the inherited line-height a fixed 26.1px, so the 56px `h1` overlaps itself on every
+  screen — shipped in the scaffold, survived four slices and three implementation reviews.
+  That last one is the real risk of this slice: **it is the one kind of change the project's
+  safety net does not reach.** Test-plan Risk #5 ("a style change shifts or hides part of the
+  screen and ships unnoticed") has zero coverage and belongs to test-rollout Phase 4. A visual
+  pass with no visual regression gate can silently break working screens, and the h1 bug is
+  the proof that it already has. Scope control matters as much: this must not become a
+  rewrite of the components' behaviour.
 
 ## Done
 
