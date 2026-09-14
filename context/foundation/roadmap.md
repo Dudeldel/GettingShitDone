@@ -34,7 +34,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | F-03 | observability-baseline     | (foundation) request-id correlation + structured logs + LogEvent | F-01          | NFR, Access Control               | done (absorbed by F-01+F-02) |
 | S-01 | capture-to-inbox           | sign in, type an idea, and see it saved in the Inbox in ~2s      | F-02          | FR-001, US-01, NFR                | done |
 | S-02 | guided-clarify-routing     | run guided clarify and route an item to its bucket              | S-01, F-03    | FR-002, FR-003, FR-004, FR-007, FR-008, US-01 | done |
-| S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | in-progress |
+| S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | done |
 | S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | absorbed by S-02 |
 | S-05 | eight-bucket-views         | open and view all 8 GTD buckets, and empty the Trash             | S-01          | FR-009 (+ Trash purge, no FR)     | done |
 | S-06 | dates-and-calendar-bucket  | assign a date to an item and see it in the Calendar/Dates bucket | S-01, S-05    | FR-011                            | proposed |
@@ -176,7 +176,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
     — done is a state (`completed_at`), not a destination; the item lands in Next Actions.
     Owner: user. Block: no.
 - **Risk:** A focused addition to the clarify flow built in S-02. The 120-second threshold is a domain constant (`app/Const/`), not a literal; the timed loop is the only stateful UX in clarify, so it is isolated here rather than tangled into the routing engine.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-04: Promote a multi-step item to a Project
 
@@ -299,3 +299,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: sign in, type an idea, and see it saved in the Inbox in ~2s** — Archived 2026-09-08 → `context/archive/2026-06-25-capture-to-inbox/`. Lesson: —.
 - **S-02: user can start guided clarify on an Inbox item, answer the decision-tree questions one at a time, and have the item land in exactly one bucket (Trash / Someday-Maybe / Reference / Next Actions / Delegation).** — Archived 2026-09-14 → `context/archive/2026-09-14-guided-clarify-routing/`. Lesson: —.
 - **S-05: user can open and view the items in each of the 8 GTD buckets (Inbox, Next Actions, Projects, Calendar/Dates, Delegation, Someday/Maybe, Reference, Trash), and permanently discard what sits in the Trash ("empty the Trash").** — Archived 2026-09-14 → `context/archive/2026-09-14-eight-bucket-views/`. Lesson: —.
+- **S-03: during clarify, a "< 2 min" item triggers a 2-minute timer; "done" marks it complete, "need more time" loops the timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-two-minute-rule-timer/`. Lesson: —.

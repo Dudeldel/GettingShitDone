@@ -1,10 +1,10 @@
 ---
 change_id: two-minute-rule-timer
 title: 2-minute rule timer in clarify
-status: impl_reviewed
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T13:15:00Z
 ---
 
 ## Notes
