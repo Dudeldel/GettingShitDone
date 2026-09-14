@@ -151,3 +151,17 @@ describe('item attributes on the row (FR-011 + FR-013)', () => {
     expect(screen.getByText(/In Next Actions/)).toBeInTheDocument()
   })
 })
+
+describe('the edit affordance', () => {
+  it('offers Edit only when the caller passes a handler', () => {
+    const item = makeItem({ id: 1, title: 'ring the dentist' })
+
+    const { rerender } = render(<InboxList items={[item]} />)
+    // Absent rather than present-and-doomed-to-422 — the same rule the completion checkbox
+    // and the Move button already follow. The Trash is where the server refuses this.
+    expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument()
+
+    rerender(<InboxList items={[item]} onEdit={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Edit "ring the dentist"' })).toBeInTheDocument()
+  })
+})

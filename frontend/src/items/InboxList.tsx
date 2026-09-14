@@ -37,6 +37,7 @@ export function InboxList({
   onClarify,
   onComplete,
   onRefile,
+  onEdit,
   pendingCompletions,
   showBucket = false,
   emptyMessage = 'Your Inbox is empty. Type an idea above to capture it.',
@@ -51,6 +52,12 @@ export function InboxList({
   onComplete?: (item: Item, next: boolean) => void
   /** Passed by the bucket views; the Inbox clarifies instead of re-filing. */
   onRefile?: (item: Item) => void
+  /**
+   * Edit the item's attributes. Omitted in the Trash, where the server refuses the write —
+   * the button is ABSENT rather than present-and-doomed-to-422, the same rule the completion
+   * checkbox and the Move button already follow.
+   */
+  onEdit?: (item: Item) => void
   /** Rows whose completion write is still in flight; their checkbox is inert until it lands. */
   pendingCompletions?: ReadonlySet<number>
   /**
@@ -147,6 +154,16 @@ export function InboxList({
           {onClarify !== undefined && (
             <button type="button" className="btn btn-quiet shrink-0" onClick={() => onClarify(item)}>
               Clarify
+            </button>
+          )}
+          {onEdit !== undefined && (
+            <button
+              type="button"
+              className="btn btn-quiet shrink-0"
+              aria-label={`Edit "${item.title}"`}
+              onClick={() => onEdit(item)}
+            >
+              Edit
             </button>
           )}
           {onRefile !== undefined && (

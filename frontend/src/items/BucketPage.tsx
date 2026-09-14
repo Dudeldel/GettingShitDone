@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { completeItem, type Destination, emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
+import { AttributesDialog } from './AttributesDialog'
 import { BucketNav } from './BucketNav'
 import { bucketLabel, isActionBucket, isGtdBucket, showsOnCalendar } from './buckets'
 import { InboxList } from './InboxList'
@@ -24,6 +25,9 @@ export function BucketPage() {
   const [purging, setPurging] = useState(false)
   const [discarded, setDiscarded] = useState<number | null>(null)
   const [refiling, setRefiling] = useState<Item | null>(null)
+  const [editing, setEditing] = useState<Item | null>(null)
+  /** The control that opened the editor, so dismissing it can hand focus back. */
+  const editTrigger = useRef<HTMLElement | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
   /** The control that opened the picker, so dismissing it can hand focus back. */
@@ -129,6 +133,48 @@ export function BucketPage() {
    * drops the user at the top of the document and makes them tab back through the whole list
    * to reach the row they started from.
    */
+  const openEdit = useCallback((item: Item) => {
+    editTrigger.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    setEditing(item)
+  }, [])
+
+  const closeEdit = useCallback(() => {
+    setEditing(null)
+    const trigger = editTrigger.current
+    editTrigger.current = null
+    // isConnected, same as cancelRefile: the row can disappear while the editor is open (a
+    // completion filtered it out), and focusing a detached node lands silently on <body>.
+    if (trigger !== null && trigger.isConnected) {
+      trigger.focus()
+    } else {
+      headingRef.current?.focus()
+    }
+  }, [])
+
+  const handleSaved = useCallback(
+    (updated: Item) => {
+      // On Calendar the row's membership is derived, so clearing a date can take it off this
+      // screen — the same rule a re-file follows, for the same reason.
+      const stays = bucket !== 'calendar' || showsOnCalendar(updated)
+
+      setItems((current) =>
+        stays
+          ? current.map((i) => (i.id === updated.id ? updated : i))
+          : current.filter((i) => i.id !== updated.id),
+      )
+      setActionError(null)
+      setActionStatus(
+        stays
+          ? `Saved changes to "${updated.title}".`
+          : `Saved changes to "${updated.title}". Without a date it is no longer on the calendar.`,
+      )
+      closeEdit()
+    },
+    [bucket, closeEdit],
+  )
+
   const openRefile = useCallback((item: Item) => {
     refileTrigger.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -243,6 +289,10 @@ export function BucketPage() {
         </label>
       )}
 
+      {editing !== null && (
+        <AttributesDialog item={editing} onSaved={handleSaved} onCancel={closeEdit} />
+      )}
+
       {refiling !== null && (
         <RefileDialog
           item={refiling}
@@ -263,6 +313,9 @@ export function BucketPage() {
           // Absent in the Inbox rather than present-and-doomed-to-422, the same rule the
           // checkbox follows: an Inbox item is unclarified, so every destination is refused.
           onRefile={bucket === 'inbox' ? undefined : openRefile}
+          // Absent in the Trash: the server refuses an edit there, so offering the control
+          // would be present-and-doomed-to-422.
+          onEdit={bucket === 'trash' ? undefined : openEdit}
           pendingCompletions={pending}
           emptyMessage={
             hiddenCount > 0

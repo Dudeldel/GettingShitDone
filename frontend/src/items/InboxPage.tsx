@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
+import { AttributesDialog } from './AttributesDialog'
 import { BucketNav } from './BucketNav'
 import { CaptureForm } from './CaptureForm'
 import { ClarifyDialog } from './ClarifyDialog'
@@ -23,6 +24,27 @@ export function InboxPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [clarifying, setClarifying] = useState<Item | null>(null)
+  const [editing, setEditing] = useState<Item | null>(null)
+  /** The control that opened the editor, so dismissing it can hand focus back. */
+  const editTrigger = useRef<HTMLElement | null>(null)
+
+  const openEdit = useCallback((item: Item) => {
+    editTrigger.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    setEditing(item)
+  }, [])
+
+  const closeEdit = useCallback(() => {
+    setEditing(null)
+    const trigger = editTrigger.current
+    editTrigger.current = null
+    // isConnected: the row can leave the Inbox while the editor is open (it was clarified in
+    // another tab, or the list reloaded), and focusing a detached node lands on <body>.
+    if (trigger !== null && trigger.isConnected) {
+      trigger.focus()
+    }
+  }, [])
 
   useEffect(() => {
     let ignore = false
@@ -57,6 +79,17 @@ export function InboxPage() {
           costs one round trip, not two (the ~2s capture NFR). */}
       <CaptureForm onCaptured={(item) => setItems((current) => [item, ...current])} />
 
+      {editing !== null && (
+        <AttributesDialog
+          item={editing}
+          onSaved={(updated) => {
+            setItems((current) => current.map((i) => (i.id === updated.id ? updated : i)))
+            closeEdit()
+          }}
+          onCancel={closeEdit}
+        />
+      )}
+
       {clarifying !== null && (
         <ClarifyDialog
           item={clarifying}
@@ -89,8 +122,12 @@ export function InboxPage() {
           truth is we never managed to ask. A list that failed to load and a list that is
           genuinely empty must never look the same. */}
       {loadError === null
-        ? (!loading || items.length > 0) && <InboxList items={items} onClarify={setClarifying} />
-        : items.length > 0 && <InboxList items={items} onClarify={setClarifying} />}
+        ? (!loading || items.length > 0) && (
+            <InboxList items={items} onClarify={setClarifying} onEdit={openEdit} />
+          )
+        : items.length > 0 && (
+            <InboxList items={items} onClarify={setClarifying} onEdit={openEdit} />
+          )}
     </main>
   )
 }

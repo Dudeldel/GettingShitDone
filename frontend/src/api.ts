@@ -53,11 +53,34 @@ export function clearToken(): void {
 export class ApiError extends Error {
   readonly status: number
 
-  constructor(status: number, message: string) {
+  /**
+   * Laravel's per-field validation errors from a 422 body, keyed by field name; null for
+   * every other failure and for a 422 that carried none.
+   *
+   * Additive on purpose. messageFor() is untouched, so the three forms that predate this keep
+   * showing one generic message exactly as they did; only a caller that asks for `errors` sees
+   * anything new. A five-field form is the first surface where one message across the whole
+   * body genuinely fails to say what to fix.
+   */
+  readonly errors: Record<string, string[]> | null
+
+  constructor(status: number, message: string, errors: Record<string, string[]> | null = null) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.errors = errors
   }
+}
+
+function isFieldErrors(value: unknown): value is Record<string, string[]> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (messages) => Array.isArray(messages) && messages.every((m) => typeof m === 'string'),
+    )
+  )
 }
 
 // Called when any request gets a 401, so the app can drop to the login screen.
@@ -104,15 +127,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let message = `HTTP ${res.status}`
+    let errors: Record<string, string[]> | null = null
     try {
-      const body = (await res.json()) as { message?: string }
+      const body = (await res.json()) as { message?: string; errors?: unknown }
       if (typeof body.message === 'string') {
         message = body.message
+      }
+      // Shape-checked rather than cast: `errors` is whatever the server sent, and a consumer
+      // rendering err.errors[field].join() must not be handed a string or a number there.
+      if (isFieldErrors(body.errors)) {
+        errors = body.errors
       }
     } catch {
       // non-JSON error body; keep the status message
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, errors)
   }
 
   if (res.status === 204) {
@@ -315,4 +344,31 @@ export function listItems(bucket?: GtdBucket): Promise<Item[]> {
   const query = bucket === undefined ? '' : `?bucket=${encodeURIComponent(bucket)}`
 
   return request<Item[]>(`/api/items${query}`)
+}
+
+/**
+ * The five attribute columns (FR-011 + FR-013), as one complete set.
+ *
+ * Every field is always sent: the endpoint REPLACES the attribute set rather than patching it,
+ * so null is an instruction ("clear this") rather than an absence. That is what lets one verb
+ * both set and remove a due date, and it is why the server rejects a partial body.
+ */
+export interface ItemAttributes {
+  dueDate: string | null
+  tags: string[] | null
+  context: string | null
+  important: boolean | null
+  urgent: boolean | null
+}
+
+/**
+ * Replace an item's attributes. Its own named verb, like every other mutation here — not a
+ * generic PATCH. The hole that was refused twice is "the client chooses where an item lands",
+ * and this payload has no field able to name a bucket.
+ */
+export function updateItemAttributes(id: number, attributes: ItemAttributes): Promise<Item> {
+  return request<Item>(`/api/items/${id}/attributes`, {
+    method: 'POST',
+    body: JSON.stringify(attributes),
+  })
 }

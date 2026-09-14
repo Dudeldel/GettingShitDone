@@ -726,3 +726,83 @@ describe('the Calendar view is derived, not a bucket query (FR-011)', () => {
     expect(within(picker).queryByRole('button', { name: 'Next Actions' })).not.toBeInTheDocument()
   })
 })
+
+describe('editing an item from a bucket view', () => {
+  it('does not offer Edit in the Trash, where the server refuses it', async () => {
+    listOnlyFor('trash', [makeItem({ id: 1, title: 'stary newsletter', bucket: 'trash' })])
+
+    renderBucket('/bucket/trash')
+
+    expect(await screen.findByText('stary newsletter')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument()
+  })
+
+  it('splices the saved item into the list without refetching', async () => {
+    listOnlyFor('next_actions', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions' }),
+    ])
+    server.use(
+      http.post('*/api/items/1/attributes', () =>
+        HttpResponse.json(
+          makeItem({
+            id: 1,
+            title: 'wyslac raport',
+            bucket: 'next_actions',
+            context: '@computer',
+          }),
+        ),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/next_actions')
+    await user.click(await screen.findByRole('button', { name: 'Edit "wyslac raport"' }))
+    await user.type(screen.getByLabelText('Context'), '@computer')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    // The row shows the server's answer, not the optimistic guess — and no second GET runs.
+    expect(await screen.findByText(/@computer/)).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Item action status' })).toHaveTextContent(
+      /Saved changes/,
+    )
+  })
+
+  it('returns focus to the Edit button when the editor is dismissed', async () => {
+    // S-11's F5 was exactly this defect on another control: focus dropping to <body> leaves a
+    // keyboard user tabbing from the top of the document.
+    listOnlyFor('next_actions', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions' }),
+    ])
+
+    const { user } = renderBucket('/bucket/next_actions')
+    const edit = await screen.findByRole('button', { name: 'Edit "wyslac raport"' })
+    await user.click(edit)
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(edit).toHaveFocus())
+  })
+
+  it('takes a row off the calendar when its date is cleared', async () => {
+    // Membership here is derived, so an edit can remove a row the same way a re-file can —
+    // and the status line has to say so, or it reads as the item having been lost.
+    listOnlyFor('calendar', [
+      makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: '2026-09-30' }),
+    ])
+    server.use(
+      http.post('*/api/items/1/attributes', () =>
+        HttpResponse.json(
+          makeItem({ id: 1, title: 'wyslac raport', bucket: 'next_actions', dueDate: null }),
+        ),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/calendar')
+    await user.click(await screen.findByRole('button', { name: 'Edit "wyslac raport"' }))
+    await user.clear(screen.getByLabelText('Due date'))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(screen.queryByText('wyslac raport')).not.toBeInTheDocument())
+    expect(screen.getByRole('status', { name: 'Item action status' })).toHaveTextContent(
+      /no longer on the calendar/,
+    )
+  })
+})

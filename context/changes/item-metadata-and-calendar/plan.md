@@ -610,31 +610,31 @@ broken one.
 
 #### Automated
 
-- [x] 3.1 npm run build and npm run lint pass
-- [x] 3.2 Vitest passes
-- [x] 3.3 InboxList tests cover each attribute present/absent, date format and overdue marker
-- [x] 3.4 BucketPage tests cover Calendar home-bucket labels and empty state
-- [x] 3.5 Deliberate breakage pass: tag rendering and date formatting each redden
+- [x] 3.1 npm run build and npm run lint pass — ca7b606
+- [x] 3.2 Vitest passes — ca7b606
+- [x] 3.3 InboxList tests cover each attribute present/absent, date format and overdue marker — ca7b606
+- [x] 3.4 BucketPage tests cover Calendar home-bucket labels and empty state — ca7b606
+- [x] 3.5 Deliberate breakage pass: tag rendering and date formatting each redden — ca7b606
 
 #### Manual
 
-- [x] 3.6 Seeded item displays all five attributes correctly
-- [x] 3.7 Calendar view legible at ~400px with no horizontal scroll
-- [x] 3.8 Overdue item distinguishable without relying on colour alone
+- [x] 3.6 Seeded item displays all five attributes correctly — ca7b606
+- [x] 3.7 Calendar view legible at ~400px with no horizontal scroll — ca7b606
+- [x] 3.8 Overdue item distinguishable without relying on colour alone — ca7b606
 
 ### Phase 4: The edit panel
 
 #### Automated
 
-- [ ] 4.1 npm run build, npm run lint, npm run test pass
-- [ ] 4.2 AttributesDialog tests cover render, submit, clear, field errors, fallback, Escape, tri-state
-- [ ] 4.3 InboxList test covers Edit button present outside Trash and absent within
-- [ ] 4.4 BucketPage tests cover splice-on-save and focus restore
-- [ ] 4.5 Deliberate breakage pass: aria-invalid and full-replacement each redden
+- [x] 4.1 npm run build, npm run lint, npm run test pass
+- [x] 4.2 AttributesDialog tests cover render, submit, clear, field errors, fallback, Escape, tri-state
+- [x] 4.3 InboxList test covers Edit button present outside Trash and absent within
+- [x] 4.4 BucketPage tests cover splice-on-save and focus restore
+- [x] 4.5 Deliberate breakage pass: aria-invalid and full-replacement each redden
 
 #### Manual
 
-- [ ] 4.6 End-to-end edit updates the row without a page reload
-- [ ] 4.7 Setting a date surfaces the item in Calendar; clearing it removes the item
-- [ ] 4.8 Keyboard-only operation with focus returning to the Edit button
-- [ ] 4.9 Invalid date shows an error under the date field, not a generic banner
+- [x] 4.6 End-to-end edit updates the row without a page reload
+- [x] 4.7 Setting a date surfaces the item in Calendar; clearing it removes the item
+- [x] 4.8 Keyboard-only operation with focus returning to the Edit button
+- [x] 4.9 Invalid date shows an error under the date field, not a generic banner
