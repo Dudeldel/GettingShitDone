@@ -3,6 +3,7 @@ import { type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
 import { useAuth } from '../auth/context'
 import { CaptureForm } from './CaptureForm'
+import { ClarifyDialog } from './ClarifyDialog'
 import { InboxList } from './InboxList'
 
 /**
@@ -22,6 +23,7 @@ export function InboxPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [clarifying, setClarifying] = useState<Item | null>(null)
 
   useEffect(() => {
     let ignore = false
@@ -79,6 +81,19 @@ export function InboxPage() {
           costs one round trip, not two (the ~2s capture NFR). */}
       <CaptureForm onCaptured={(item) => setItems((current) => [item, ...current])} />
 
+      {clarifying !== null && (
+        <ClarifyDialog
+          item={clarifying}
+          onCancel={() => setClarifying(null)}
+          onClarified={(clarified) => {
+            // Remove by id, never by index: the list is a union of server truth and local
+            // state (see mergeById), so positions are not stable.
+            setItems((current) => current.filter((item) => item.id !== clarified.id))
+            setClarifying(null)
+          }}
+        />
+      )}
+
       <h2>Inbox</h2>
       {loadError !== null && (
         <p style={{ color: 'var(--error)' }}>Could not load your Inbox: {loadError}</p>
@@ -92,8 +107,8 @@ export function InboxPage() {
           truth is we never managed to ask. A list that failed to load and a list that is
           genuinely empty must never look the same. */}
       {loadError === null
-        ? (!loading || items.length > 0) && <InboxList items={items} />
-        : items.length > 0 && <InboxList items={items} />}
+        ? (!loading || items.length > 0) && <InboxList items={items} onClarify={setClarifying} />
+        : items.length > 0 && <InboxList items={items} onClarify={setClarifying} />}
     </main>
   )
 }

@@ -408,25 +408,25 @@ migration plus reverting the slice.
 
 #### Automated
 
-- [x] 2.1 Item feature tests pass
-- [x] 2.2 Full backend quality gate passes
-- [x] 2.3 Scramble export succeeds
-- [x] 2.4 Transition test proven able to fail by deliberate breakage
+- [x] 2.1 Item feature tests pass — ba74ad3
+- [x] 2.2 Full backend quality gate passes — ba74ad3
+- [x] 2.3 Scramble export succeeds — ba74ad3
+- [x] 2.4 Transition test proven able to fail by deliberate breakage — ba74ad3
 
 #### Manual
 
-- [x] 2.5 Tree path and quick-route both behave as documented
+- [x] 2.5 Tree path and quick-route both behave as documented — ba74ad3
 
 ### Phase 3: The clarify wizard
 
 #### Automated
 
-- [ ] 3.1 Frontend tests pass
-- [ ] 3.2 Frontend build and lint pass
-- [ ] 3.3 Backend suite still green
-- [ ] 3.4 Wizard test proven able to fail by deliberate breakage
+- [x] 3.1 Frontend tests pass
+- [x] 3.2 Frontend build and lint pass
+- [x] 3.3 Backend suite still green
+- [x] 3.4 Wizard test proven able to fail by deliberate breakage
 
 #### Manual
 
-- [ ] 3.5 Each branch routes to the right bucket, verified end to end
-- [ ] 3.6 A clarified item disappears from the Inbox list
+- [x] 3.5 Each branch routes to the right bucket, verified end to end
+- [x] 3.6 A clarified item disappears from the Inbox list

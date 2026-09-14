@@ -6,7 +6,14 @@ function capturedAt(iso: string): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
 }
 
-export function InboxList({ items }: { items: Item[] }) {
+export function InboxList({
+  items,
+  onClarify,
+}: {
+  items: Item[]
+  /** Omitted by callers that only display items — bucket views (S-05) will not clarify. */
+  onClarify?: (item: Item) => void
+}) {
   if (items.length === 0) {
     return <p style={{ color: 'var(--muted)' }}>Your Inbox is empty. Type an idea above to capture it.</p>
   }
@@ -26,6 +33,15 @@ export function InboxList({ items }: { items: Item[] }) {
           <time dateTime={item.createdAt} style={{ color: 'var(--muted)', fontSize: '0.8em' }}>
             {capturedAt(item.createdAt)}
           </time>
+          {onClarify !== undefined && (
+            <button
+              type="button"
+              onClick={() => onClarify(item)}
+              style={{ marginLeft: '0.75rem' }}
+            >
+              Clarify
+            </button>
+          )}
         </li>
       ))}
     </ul>

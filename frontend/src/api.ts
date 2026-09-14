@@ -193,6 +193,9 @@ export interface Item {
   context: string | null
   important: boolean | null
   urgent: boolean | null
+  // Filled by clarify when the item is delegated (FR-007); null for the other seven buckets.
+  delegatedTo: string | null
+  delegationDone: boolean | null
   createdAt: string
   updatedAt: string
 }
@@ -201,6 +204,35 @@ export function captureItem(title: string, note?: string): Promise<Item> {
   return request<Item>('/api/items', {
     method: 'POST',
     body: JSON.stringify(note === undefined ? { title } : { title, note }),
+  })
+}
+
+/** The three destinations FR-004 offers for a non-actionable item. */
+export type NonActionableDestination = Extract<
+  GtdBucket,
+  'trash' | 'someday_maybe' | 'reference'
+>
+
+/**
+ * The answers the clarify endpoint accepts, as a discriminated union rather than a bag of
+ * optional fields — every member here is a complete, terminating path through the GTD tree,
+ * so an incomplete answer set cannot be constructed. Mirrors ClarifyItemPayload's two modes:
+ * the guided tree, and the FR-002 quick-route.
+ *
+ * Note what is absent: there is no general `bucket` field on the tree path. The client sends
+ * answers; the server derives the destination.
+ */
+export type ClarifyAnswers =
+  | { quickRouteBucket: GtdBucket }
+  | { actionable: false; nonActionableDestination: NonActionableDestination }
+  | { actionable: true; singleStep: false }
+  | { actionable: true; singleStep: true; delegable: false }
+  | { actionable: true; singleStep: true; delegable: true; delegatedTo: string }
+
+export function clarifyItem(id: number, answers: ClarifyAnswers): Promise<Item> {
+  return request<Item>(`/api/items/${id}/clarify`, {
+    method: 'POST',
+    body: JSON.stringify(answers),
   })
 }
 

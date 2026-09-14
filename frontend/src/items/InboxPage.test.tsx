@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -162,5 +162,61 @@ describe('the Inbox on a clean load', () => {
     releaseList()
 
     expect(await screen.findByText(/your inbox is empty/i)).toBeInTheDocument()
+  })
+})
+
+describe('clarifying from the Inbox', () => {
+  it('removes the item from the list once it has landed in its bucket', async () => {
+    server.use(
+      http.get('*/api/items', () =>
+        HttpResponse.json([
+          makeItem({ id: 1, title: 'ring the dentist' }),
+          makeItem({ id: 2, title: 'read that article' }),
+        ]),
+      ),
+      http.post('*/api/items/:id/clarify', () =>
+        HttpResponse.json(makeItem({ id: 1, bucket: 'next_actions' })),
+      ),
+    )
+
+    const { user } = renderPage()
+    await screen.findByText('ring the dentist')
+
+    // Two items, so removal by id rather than by index is what is actually under test.
+    await user.click(screen.getAllByRole('button', { name: /clarify/i })[0])
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: /i will do it next/i }))
+
+    await waitFor(() =>
+      expect(screen.queryByText('ring the dentist')).not.toBeInTheDocument(),
+    )
+    // The other item must survive.
+    expect(screen.getByText('read that article')).toBeInTheDocument()
+  })
+
+  it('keeps the item listed when clarify fails', async () => {
+    server.use(
+      http.get('*/api/items', () =>
+        HttpResponse.json([makeItem({ id: 1, title: 'ring the dentist' })]),
+      ),
+      http.post('*/api/items/:id/clarify', () =>
+        HttpResponse.json({ message: 'That item has already been clarified.' }, { status: 409 }),
+      ),
+    )
+
+    const { user } = renderPage()
+    await screen.findByText('ring the dentist')
+
+    await user.click(screen.getByRole('button', { name: /clarify/i }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
+    await user.click(screen.getByRole('button', { name: /bin it/i }))
+
+    // By text, not by role: the capture form also keeps an always-mounted role="alert",
+    // so findByRole('alert') is ambiguous on this screen.
+    expect(await screen.findByText(/already been clarified/i)).toBeInTheDocument()
+    // Scoped to the list row: the dialog stays open on failure (so the user can retry or
+    // cancel) and shows the same title in its heading, so a bare getByText is ambiguous.
+    expect(within(screen.getByRole('listitem')).getByText('ring the dentist')).toBeInTheDocument()
   })
 })

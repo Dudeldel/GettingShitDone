@@ -30,6 +30,8 @@ export function makeItem(overrides: Partial<Item> = {}): Item {
     context: null,
     important: null,
     urgent: null,
+    delegatedTo: null,
+    delegationDone: null,
     createdAt: '2026-09-14T10:00:00+00:00',
     updatedAt: '2026-09-14T10:00:00+00:00',
     ...overrides,
