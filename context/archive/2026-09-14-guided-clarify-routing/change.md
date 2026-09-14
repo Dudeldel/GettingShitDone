@@ -1,10 +1,10 @@
 ---
 change_id: guided-clarify-routing
 title: Guided clarify routes an Inbox item into exactly one bucket
-status: impl_reviewed
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T11:36:19Z
 ---
 
 ## Notes
