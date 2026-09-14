@@ -464,12 +464,12 @@ and the CSS delta should be small. Worth a glance at the build output in Phase 3
 
 #### Automated
 
-- [x] 3.1 All six gates green
-- [x] 3.2 No orphaned asset references remain
+- [x] 3.1 All six gates green — 56da13c
+- [x] 3.2 No orphaned asset references remain — 56da13c
 
 #### Manual
 
-- [x] 3.3 Walk login: idle, session-expired, submitting, 401, other error
-- [x] 3.4 Unknown URL signed in and signed out; neither leaks account existence
-- [x] 3.5 Hard-reload with a stored token shows the rehydration state without flashing
-- [x] 3.6 Full sweep of every state across all three routes at 1280px and 400px
+- [x] 3.3 Walk login: idle, session-expired, submitting, 401, other error — 56da13c
+- [x] 3.4 Unknown URL signed in and signed out; neither leaks account existence — 56da13c
+- [x] 3.5 Hard-reload with a stored token shows the rehydration state without flashing — 56da13c
+- [x] 3.6 Full sweep of every state across all three routes at 1280px and 400px — 56da13c
