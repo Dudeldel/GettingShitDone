@@ -258,20 +258,24 @@ describe('the two-minute rule (FR-006)', function () {
     });
 
     it('refuses an unanswered two-minute question', function () {
+        // The MESSAGE, not just the class. Every gap in the tree raises the same exception
+        // type, so asserting the class alone passes when the two-minute guard is deleted and
+        // the delegable guard further down happens to fire instead — the test would then be
+        // green while the question it names is no longer asked at all.
         expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
-        )))->toThrow(InvalidClarificationException::class);
+        )))->toThrow(InvalidClarificationException::class, 'less than two minutes');
     });
 
     it('refuses a timer that started and never ended', function () {
         // Defaulting either way is the failure: "done" invents work the user never did,
-        // "deferred" discards work they did.
+        // "deferred" discards work they did. Pinned by message for the same reason as above.
         expect(fn () => ($this->decide)(ClarifyItemPayload::treePath(
             actionable: true,
             singleStep: true,
             twoMinutes: true,
-        )))->toThrow(InvalidClarificationException::class);
+        )))->toThrow(InvalidClarificationException::class, 'needs an outcome');
     });
 
     it('does not complete an item that never went near the timer', function () {
