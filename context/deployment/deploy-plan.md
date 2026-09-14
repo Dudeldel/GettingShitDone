@@ -47,6 +47,8 @@ Removed: `deploy/nginx`, `deploy/systemd`, `deploy/backup`, the SSH `deploy.yml`
 
 Both services track the branch `chore/GSD-1-walking-skeleton-deploy`. **Auto-deploy-on-push is NOT active**: the Railway GitHub App is not installed on the repo, so a `git push` does not trigger a build. Deploys are triggered **manually** (Railway MCP / dashboard / `railway up`) against the latest commit on the tracked branch.
 
+**That branch has since been deleted from origin** (`git branch -r` lists only `origin/main`), so there is no newer commit for Railway to fetch and a dashboard "Redeploy" — which rebuilds the same deployment's snapshot anyway, never a newer commit — keeps shipping the walking-skeleton build. Do the re-point below before trusting any deploy.
+
 To get true push-to-deploy: install the **Railway GitHub App** on `Dudeldel/GettingShitDone`, then point each service at `main` and enable auto-deploy. Until then, merging to `main` is for code hygiene only — it does not deploy.
 
 ## Status — LIVE (deployed 2026-06-23)
