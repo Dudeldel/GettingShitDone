@@ -84,9 +84,9 @@ orchestrator updates Status as artifacts appear on disk.
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
 | 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | complete | `context/archive/2026-09-14-testing-capture-durability/` |
-| 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | not started | — |
+| 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | planned | `context/changes/testing-contract-parity/` |
 | 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
-| 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | not started | — |
+| 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | parked | — |
 | 5 | Clarify routing invariant | Prove every decision-tree path ends in exactly one bucket | #3 | unit, integration | complete | — (covered by roadmap slice S-02, not by its own change folder — see §6.6) |
 
 Phase order follows cost × signal: the two guardrail risks are attacked at
@@ -97,6 +97,15 @@ fourth — it is the most expensive layer and only pays once the cheaper ones
 are green. Phase 5 was ordered last because it was blocked until roadmap slice
 S-02 (`guided-clarify-routing`) shipped; S-02 has since shipped and been
 archived, so the block is gone.
+
+**Phase 4 parked, 2026-09-14.** Builder scope call: the browser layer is deferred, not abandoned —
+Risk #5 and the browser half of Risk #1 keep their automated gate at zero until it opens. Two
+consequences worth stating rather than discovering. First, `parked` is **not** in the status
+vocabulary the `/10x-test-plan` orchestrator parses (`not started` → `change opened` → `researched`
+→ `planned` → `implementing` → `complete`), so it resolves Phase 4 as "not complete" and will
+resume there; tell it to skip, or move the row to `complete` with a skip note if that becomes
+tiresome. Second, Phase 4 is the only phase covering the browser, so nothing else in this rollout
+picks up its risks in the meantime.
 
 **Status audit, 2026-09-14.** The Status column is orchestrator state — it
 records whether a *phase* was run, not how much coverage happens to exist. Those

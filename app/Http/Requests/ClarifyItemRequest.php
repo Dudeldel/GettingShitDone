@@ -48,13 +48,19 @@ class ClarifyItemRequest extends FormRequest
             /**
              * FR-002 quick-route: name the destination outright and skip the tree.
              * Mutually exclusive with every tree answer.
+             *
+             * Every bucket EXCEPT the Inbox. Routing to the Inbox is not a clarification, it is
+             * the absence of one, and the request is refused with a 422. That refusal lives in
+             * the domain rather than in this rule, so it cannot appear in the schema's value
+             * list — which is why it is stated here instead.
              */
             'quickRouteBucket' => [
                 'nullable',
                 Rule::enum(GtdBucket::class),
                 'prohibits:actionable,nonActionableDestination,singleStep,twoMinutes,twoMinuteOutcome,twoMinuteLoops,delegable',
             ],
-            // The first question of the tree (FR-003). Required unless quick-routing.
+            // The first question of the tree (FR-003). Required unless quick-routing — the
+            // document cannot express that dependency in `required`, so it is written here.
             'actionable' => ['required_without:quickRouteBucket', 'boolean'],
             /**
              * FR-004: a non-actionable item goes to one of exactly three destinations.
@@ -68,7 +74,7 @@ class ClarifyItemRequest extends FormRequest
                     GtdBucket::Reference->value,
                 ]),
             ],
-            // Asked only once the item is actionable.
+            // Asked only once the item is actionable, and required as soon as it is.
             'singleStep' => ['required_if_accepted:actionable', 'boolean'],
             /**
              * FR-006: the two-minute rule. Asked once the item is a single step, and BEFORE
