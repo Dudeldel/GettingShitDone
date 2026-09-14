@@ -84,7 +84,7 @@ orchestrator updates Status as artifacts appear on disk.
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
 | 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | complete | `context/archive/2026-09-14-testing-capture-durability/` |
-| 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | planned | `context/changes/testing-contract-parity/` |
+| 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | complete | `context/changes/testing-contract-parity/` |
 | 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
 | 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | parked | — |
 | 5 | Clarify routing invariant | Prove every decision-tree path ends in exactly one bucket | #3 | unit, integration | complete | — (covered by roadmap slice S-02, not by its own change folder — see §6.6) |
@@ -116,6 +116,12 @@ only on the case §2 names as the anti-pattern; Phase 4 untouched. Phases 2, 3
 and 4 stay `not started` because none of them has been *run* and each still has
 real work left — §6.6 records exactly what, so whoever opens them scopes the
 remainder instead of re-deriving it.
+
+**Superseded in part, 2026-09-14.** Phase 2 has since shipped (`complete`) and
+Phase 4 has been parked, so the paragraph above now describes Phase 3 alone. The
+audit's reading of the published document was also wrong in three places — the
+Phase 2 note in §6.6 records what it got wrong and why the mistake is worth
+remembering.
 
 ## 4. Stack
 
@@ -225,6 +231,17 @@ the relevant rollout phase ships; before that, the sub-section reads
 - **Reference test**: `tests/Feature/Item/ListItemsTest.php`.
 - **When to add e2e instead**: only when the failure mode needs the full
   deployed shape — two origins, real auth, real browser.
+- **Contract parity is automatic, with one exception.** A new FormRequest is
+  picked up by `tests/Feature/Api/ContractParityTest.php` with no action — it
+  discovers them on disk, so one with no published schema fails rather than
+  being skipped. The exception: a rule token the check has never seen fails by
+  name, and you must either map it to its OpenAPI counterpart in
+  `Tests\Support\EnforcedRules` or add it to `UNREPRESENTABLE` **with a reason**.
+  Never widen the check to ignore it.
+- **Join the behavioural set when your state is cheap.** If a valid request for
+  the endpoint costs about one `seedItem()`, add it to
+  `tests/Feature/Api/ContractEnforcementTest.php` so its documented limits are
+  proven enforced and not merely published.
 
 ### 6.5 Adding an e2e or visual test
 
@@ -277,20 +294,45 @@ the relevant rollout phase ships; before that, the sub-section reads
   was avoided: the expectations are written against PRD FR-004/005/006/007, and
   `ClarifyDecision`'s own docblock lists the terminating paths in the same terms.
 
-**Phase 2 — HTTP edge contract and sensitive data** (audited 2026-09-14; still
-`not started`, but narrower than written).
+**Phase 2 — HTTP edge contract and sensitive data** (shipped 2026-09-14,
+`0c294ac`; change folder `context/changes/testing-contract-parity/`).
 
-- **Already covered, incidentally:** boundary tests derive their limits from the
-  owning constant rather than hard-coding them (`ItemConst` in
-  `tests/Feature/Item/{CaptureItemTest,ClarifyItemTest,UpdateItemAttributesTest}.php`)
-  — the lived finding §2 warns about. Risk #7 has
-  `tests/Unit/Logging/RedactSensitiveDataTest.php` plus failure-path log-record
-  assertions across the Feature suite.
-- **What actually remains** is the first half of the goal: *nothing checks that
-  the published contract is the enforced one.* There is no test, and no CI step,
-  that compares the Scramble output (`api.json`) against the rules the
-  FormRequests really apply — so the two can drift silently, which is the exact
-  failure Risk #4 names. Scope the phase to that when it opens.
+- **Correction to this note's own earlier version.** The 2026-09-14 audit said
+  three fields published an empty `{}` schema and that `tags` had lost its
+  `maxItems`. None of that was true. The inspection script behind it filtered
+  schema keys to a hand-written list that omitted `$ref` and `maxItems`, so
+  fields publishing a perfectly good reference rendered as empty. Read the
+  schema **whole**; a key allowlist is how this kind of thing hides.
+- **What actually drifted, and is now fixed:** `RefileItemRequest` published a
+  `$ref` to the full eight-value `GtdBucket` while its rule allowed seven, so
+  the document offered `inbox` as a destination the endpoint refuses with a 422.
+  `Rule::enum(GtdBucket::class)` was redundant beside a seven-value `Rule::in`
+  but was what widened the published set. Removing it publishes the narrowed
+  enum; ten `RefileItemTest` cases were unaffected.
+- **Two layers, and the reason neither is redundant.** The structural check
+  compares each rule token to its published counterpart — resolving `$ref`
+  first, because a narrowed `Rule::in` and a full-enum `$ref` are
+  indistinguishable until you do. The behavioural check reads the published
+  limits and fires requests at both sides of each. The breakage that settles it:
+  making `prepareForValidation` silently truncate `context` instead of rejecting
+  it leaves rule and document in agreement, so the structural layer cannot see
+  it at all — only the behavioural one goes red.
+- **The allowlist is load-bearing.** A rule token that is neither mapped nor
+  listed in `EnforcedRules::UNREPRESENTABLE` fails the check by name. Without
+  that, the check would degrade quietly into one that verifies almost nothing as
+  new rules arrive. Eleven tokens are currently listed, each with a reason —
+  conditional requirements, conditional exclusions, and `unique`, which is
+  asserted against database state rather than the payload.
+- **The document is generated in process**, not read from the git-ignored
+  `api.json`. One consequence worth knowing before writing a breakage test: a
+  `max:` rule and its published counterpart cannot be desynchronised by editing
+  either, because both come from the same source in the same run.
+- **Honest limits.** Login publishes no length or enum constraint to check, and
+  register is gated to a single account so each attempt mutates state the next
+  depends on; both are out of the behavioural set. Clarify and complete are
+  covered structurally but not behaviourally — for them the document is proven
+  *complete*, not proven *enforced*. Risk #7 (captured text in logs) was already
+  covered and was not re-tested here.
 
 **Phase 3 — Single-account invariant** (audited 2026-09-14; `not started`).
 

@@ -336,28 +336,28 @@ the generated document says, never what the application enforces.
 
 #### Automated
 
-- [x] 1.1 Pest suite passes
-- [x] 1.2 Larastan clean at level 6
-- [x] 1.3 Pint clean
-- [x] 1.4 Structural check covers every FormRequest; a new one cannot be silently skipped
-- [x] 1.5 Structural check fails by name on an unmapped, unallowlisted rule token
-- [x] 1.6 Published enum for refile's bucket is the seven destinations; the two description gaps closed
-- [x] 1.7 Behavioural check exercises both sides of every documented length and enum constraint in scope
-- [x] 1.8 Deliberate breakage pass: constant change, enum removal and rule loosening each redden
+- [x] 1.1 Pest suite passes — 0c294ac
+- [x] 1.2 Larastan clean at level 6 — 0c294ac
+- [x] 1.3 Pint clean — 0c294ac
+- [x] 1.4 Structural check covers every FormRequest; a new one cannot be silently skipped — 0c294ac
+- [x] 1.5 Structural check fails by name on an unmapped, unallowlisted rule token — 0c294ac
+- [x] 1.6 Published enum for refile's bucket is the seven destinations; the two description gaps closed — 0c294ac
+- [x] 1.7 Behavioural check exercises both sides of every documented length and enum constraint in scope — 0c294ac
+- [x] 1.8 Deliberate breakage pass: constant change, enum removal and rule loosening each redden — 0c294ac
 
 #### Manual
 
-- [x] 1.9 Exported document is readable and states the previously-empty fields
-- [x] 1.10 Parity tests add no noticeable time to the suite
+- [x] 1.9 Exported document is readable and states the previously-empty fields — 0c294ac
+- [x] 1.10 Parity tests add no noticeable time to the suite — 0c294ac
 
 ### Phase 2: Close the rollout phase
 
 #### Automated
 
-- [ ] 2.1 Pest suite passes
-- [ ] 2.2 test-plan.md §3 shows Phase 2 complete with its change folder
-- [ ] 2.3 §6.6 records what shipped and names the structurally-only covered endpoints
+- [x] 2.1 Pest suite passes
+- [x] 2.2 test-plan.md §3 shows Phase 2 complete with its change folder
+- [x] 2.3 §6.6 records what shipped and names the structurally-only covered endpoints
 
 #### Manual
 
-- [ ] 2.4 §6.6 alone is enough to know what to do when adding an endpoint
+- [x] 2.4 §6.6 alone is enough to know what to do when adding an endpoint
