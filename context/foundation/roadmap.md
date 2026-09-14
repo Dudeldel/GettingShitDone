@@ -37,9 +37,9 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | done |
 | S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | absorbed by S-02 |
 | S-05 | eight-bucket-views         | open and view all 8 GTD buckets, and empty the Trash             | S-01          | FR-009 (+ Trash purge, no FR)     | done |
-| S-06 | dates-and-calendar-bucket  | assign a date to an item and see it in the Calendar/Dates bucket | S-01, S-05    | FR-011                            | proposed |
-| S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | proposed |
-| S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
+| S-06 | item-metadata-and-calendar | assign a date, tags, contexts and flags to an item; dated items show in Calendar | S-01, S-05    | FR-011, FR-013                    | proposed |
+| S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | absorbed by S-06 |
+| S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-06    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
 | S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | done |
 | S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | done        |
@@ -55,7 +55,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | B      | Identity & capture (north star) | `F-02` → `S-01`                | Auth gate then the north-star capture slice; depends on Stream A's `F-01`. |
 | C      | Clarify core & branches     | `S-02` → `S-03` / `S-04`           | The GTD heart; joins Stream B at `S-01` and needs `F-03` for LogEvent.    |
 | D      | Buckets, dates & review      | `S-05` → `S-06` / `S-09`           | Read/organize surfaces; builds on `S-01`, meaningful once `S-02` routes.  |
-| E      | Metadata & prioritization   | `S-07` → `S-08`                    | Cheap-win fields that feed the Eisenhower view; builds on `S-01`/`S-02`.  |
+| E      | Metadata & prioritization   | `S-06` → `S-08`                    | Item attributes (incl. important/urgent) feed the Eisenhower view; S-07 absorbed into S-06. |
 
 ## Parallel waves
 
@@ -69,8 +69,9 @@ Build it alone first; nothing parallelizes with it.
 | Wave | Runs in parallel | Each needs |
 | ---- | ---------------- | ---------- |
 | Gateway | `S-01` (solo) | F-02 |
-| A | `S-02` ∥ `S-05` ∥ `S-07` | each only needs S-01 (S-02 also F-03, done) |
-| B | `S-03` ∥ `S-04` ∥ `S-06` ∥ `S-08` ∥ `S-09` | S-03/S-04←S-02 · S-06←S-01+S-05 · S-08←S-02+S-07 · S-09←S-05 |
+| A | `S-02` ∥ `S-05` | each only needs S-01 (S-02 also F-03, done) |
+| B | `S-03` ∥ `S-04` ∥ `S-06` ∥ `S-09` | S-03/S-04←S-02 · S-06←S-01+S-05 · S-09←S-05 |
+| C | `S-08` | S-08←S-02+S-06 (needs S-06's important/urgent) |
 
 Within a wave, no item depends on another, so they are dependency-parallel. **Caveats:**
 (1) Wave-A/B slices add columns/fields to the **same `items` table + Item model/DTO**, so
@@ -211,16 +212,32 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Note (added 2026-09-14):** the Trash purge was folded in here on purpose rather than getting its own slice. In GTD the Trash IS the delete (FR-004), so routing an item there is a clarify outcome, not a removal — as of S-02 nothing in the product ever removes a row. The Trash view is the only place a permanent discard belongs, so it rides along with the view that introduces it. Secondary, and not the reason it was added: it also closes the missing Delete operation in the 10xBuilder CRUD check.
 - **Status:** done
 
-### S-06: Assign dates; Calendar/Dates bucket
+### S-06: Item attributes; Calendar/Dates bucket
 
-- **Outcome:** user can assign a date/deadline to an item, and date-specific items appear in the Calendar/Dates bucket.
-- **Change ID:** dates-and-calendar-bucket
-- **PRD refs:** FR-011
+- **Outcome:** user can give an item a date, tags, a context and the important/urgent flags,
+  and an item that has a date shows up in the Calendar/Dates bucket.
+- **Change ID:** item-metadata-and-calendar
+- **PRD refs:** FR-011, FR-013 (S-07 absorbed)
 - **Prerequisites:** S-01, S-05
-- **Parallel with:** S-07
+- **Parallel with:** —
 - **Blockers:** —
-- **Unknowns:** —
-- **Risk:** A date is both a field on any item AND the membership rule for the Calendar/Dates view (FR-011 keeps both). Use the single date-format constant (`app/Const/`) to avoid drift across validation and display.
+- **Unknowns:**
+  - **What "shows up in Calendar" means, given FR-008.** The PRD considered collapsing Calendar
+    into a date field and deliberately kept both (FR-011's Socrates note), while FR-008 says an
+    item lives in exactly one bucket. So a dated Next Action cannot be a member of two. Working
+    direction: a date makes the item appear in Calendar as a **view over the date**, not a second
+    membership — the same shape as the Eisenhower quadrant, which `CLAUDE.md` already requires to
+    be computed rather than stored. This has to be settled in research/plan, not discovered
+    mid-implementation.
+- **Risk:** A date is both a field on any item AND the membership rule for the Calendar/Dates
+  view. Use the single date-format constant (`app/Const/ClarifyConst::DATE_FORMAT`, already
+  present) so validation and display cannot drift.
+- **Risk:** This is the first write path for the five dormant columns, and the first
+  edit-an-item surface in the product. The codebase has deliberately refused a generic update
+  (`routes/api.php:35`; both S-11 payloads are shaped to close that hole), so the verb this
+  slice adds is exactly where that discipline is most at risk.
+- **Risk:** important/urgent are the inputs S-08 reads, so their encoding must be modelled
+  deliberately here rather than improvised.
 - **Status:** proposed
 
 ### S-07: Tags, contexts, priorities, and flags
@@ -233,18 +250,25 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Cheap-win metadata fields, but they are the inputs the Eisenhower view (S-08) reads, so the important/urgent encoding must be modelled deliberately here rather than improvised. Low risk; mostly additive item fields.
-- **Status:** proposed
+- **Status:** absorbed by S-06 — both write to the same five dormant columns on `items`
+  (`due_date`, `tags`, `context`, `important`, `urgent`), all of which already exist, are cast,
+  and are deliberately kept out of `#[Fillable]`; `Item.php:14` has said since S-01 that
+  "S-06/S-07 add their write paths together with validation". Neither slice has an
+  edit-an-item surface to build on, so splitting them means inventing that form for one field
+  and widening it for four more a week later. Worse, two overlapping verbs that both edit item
+  fields are the standing invitation to "tidy them up" into the generic PATCH this codebase has
+  twice refused. Following the S-04 and S-12 precedent, S-06 carries both.
 
 ### S-08: Eisenhower quadrants for Next Actions
 
 - **Outcome:** user can view Next Actions arranged in Eisenhower quadrants (important × urgent).
 - **Change ID:** eisenhower-quadrants
 - **PRD refs:** FR-014
-- **Prerequisites:** S-02, S-07
-- **Parallel with:** S-06, S-09
+- **Prerequisites:** S-02, S-06
+- **Parallel with:** S-09
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** The quadrant is a derived view from important × urgent, not stored state (per `CLAUDE.md`). The risk is materializing it as a persisted field instead of a computed projection over S-07's metadata and S-02's Next Actions.
+- **Risk:** The quadrant is a derived view from important × urgent, not stored state (per `CLAUDE.md`). The risk is materializing it as a persisted field instead of a computed projection over S-06's important/urgent flags and S-02's Next Actions.
 - **Status:** proposed
 
 ### S-09: Guided weekly review
@@ -374,9 +398,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03       | two-minute-rule-timer     | 2-minute rule timer in clarify                        | no                    | Needs S-02                             |
 | S-04       | promote-to-project        | Promote a multi-step item to a Project               | no                    | Needs S-02                             |
 | S-05       | eight-bucket-views        | View all 8 GTD buckets; empty the Trash               | no                    | Needs S-01                             |
-| S-06       | dates-and-calendar-bucket | Assign dates; Calendar/Dates bucket                   | no                    | Needs S-01, S-05                       |
-| S-07       | item-metadata             | Tags, contexts, priorities, and flags                 | no                    | Needs S-01                             |
-| S-08       | eisenhower-quadrants      | Eisenhower quadrants for Next Actions                 | no                    | Needs S-02, S-07                       |
+| S-06       | item-metadata-and-calendar | Item attributes; Calendar/Dates bucket               | **yes**               | S-01, S-05 shipped; absorbs S-07       |
+| S-07       | item-metadata             | Tags, contexts, priorities, and flags                 | —                     | Absorbed by S-06                       |
+| S-08       | eisenhower-quadrants      | Eisenhower quadrants for Next Actions                 | no                    | Needs S-06 (important/urgent)          |
 | S-09       | weekly-review             | Guided weekly review                                   | no                    | Needs S-05                             |
 
 ## Open Roadmap Questions
