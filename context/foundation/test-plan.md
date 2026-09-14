@@ -85,7 +85,7 @@ orchestrator updates Status as artifacts appear on disk.
 |---|---|---|---|---|---|---|
 | 1 | Capture durability and error surfacing | Prove the confirmation never lies and a failure reaches the user without destroying their text | #1, #2 | integration, client component — bootstraps frontend test infrastructure | complete | `context/archive/2026-09-14-testing-capture-durability/` |
 | 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | complete | `context/changes/testing-contract-parity/` |
-| 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
+| 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | complete | `context/changes/testing-single-account-race/` |
 | 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | parked | — |
 | 5 | Clarify routing invariant | Prove every decision-tree path ends in exactly one bucket | #3 | unit, integration | complete | — (covered by roadmap slice S-02, not by its own change folder — see §6.6) |
 
@@ -334,18 +334,34 @@ the relevant rollout phase ships; before that, the sub-section reads
   *complete*, not proven *enforced*. Risk #7 (captured text in logs) was already
   covered and was not re-tested here.
 
-**Phase 3 — Single-account invariant** (audited 2026-09-14; `not started`).
+**Phase 3 — Single-account invariant** (closed 2026-09-14 WITHOUT a race test;
+change folder `context/changes/testing-single-account-race/`).
 
-- `tests/Feature/Auth/RegisterTest.php` covers only the **sequential** second
-  registration — which is precisely what §2 lists as this risk's anti-pattern
-  ("Testing only the sequential second attempt — which already passes — and
-  calling the race covered").
-- The gap is real, not pedantic: the gate is `lockForUpdate` inside a
-  transaction (`UserRepository::createFirstUserOrNull`), **not** a database
-  constraint. `users.email UNIQUE` would stop two concurrent registrations using
-  the same address, but the invariant is "at most one user *at all*" — two
-  concurrent registrations with *different* addresses are the shape that has to
-  be proven, and nothing asserts it.
+- **The concurrent half of Risk #6 has no automated gate, deliberately.** The gate
+  is `lockForUpdate` inside a transaction
+  (`UserRepository::createFirstUserOrNull`), not a database constraint. `FOR UPDATE`
+  is a MySQL construct; on SQLite it compiles to a no-op and any serialization comes
+  from SQLite's own write locking instead.
+- **The suite cannot exercise it.** Tests run on SQLite `:memory:`
+  (`phpunit.xml:26-27`) and CI runs the same (`.github/workflows/ci.yml:39`, with no
+  `services:` block at all). `:memory:` is one connection per test, so two genuinely
+  concurrent transactions against the same database are unreachable at this layer.
+- **So a race test written here would be green for the wrong reason** — because
+  SQLite serialized the writes, not because the gate holds on the engine that runs
+  in production. That is the exact failure `lessons.md` exists to prevent, and it
+  would be worse than no test: it would claim coverage of the one invariant the PRD
+  calls a permanent non-goal to violate.
+- **`tests/Feature/Auth/RegisterTest.php` is NOT race coverage.** It proves the
+  *sequential* second registration is refused, which §2 names as this risk's
+  anti-pattern. Do not read it as closing the risk.
+- **Two things would make the concurrent case provable**, both considered and
+  declined here rather than forgotten: a database-level constraint capping `users`
+  at one row — concurrency then stops mattering, because whichever transaction
+  commits second violates it, and this is what §2's own Risk Response Guidance
+  pointed at — or a MySQL service in CI plus real multi-process parallelism.
+- **Residual risk accepted:** two concurrent first-run registrations with
+  *different* email addresses are unproven. `users.email UNIQUE` does not help —
+  the invariant is "at most one user *at all*", not "at most one per address".
 
 ## 7. What We Deliberately Don't Test
 
