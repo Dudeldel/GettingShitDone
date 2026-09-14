@@ -324,7 +324,7 @@ Business-meaningful events always go through a static `App\Logging\LogEvent` hel
 
 ---
 
-# Typing & API-docs tooling (not yet installed)
+# Typing & API-docs tooling
 
 These realize the `quality_override` compensation in @../context/foundation/tech-stack.md — PHP is dynamically typed; we patch that with static analysis + types + generated docs. Tests/Pest conventions live in @../tests/CLAUDE.md.
 

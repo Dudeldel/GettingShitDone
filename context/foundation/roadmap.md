@@ -420,7 +420,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-08: Eisenhower quadrants for Next Actions (FR-014)** — Why parked: builder scope call
   2026-09-14; the MVP closes on what is built. Ready to plan whenever S-06 lands — its inputs
   (important/urgent) ship with S-06 regardless. **Parks PRD must-have scope**, so the PRD and
-  this roadmap now disagree until one of them is amended.
+  this roadmap now disagree until one of them is amended — the disagreement is recorded on the
+  PRD side too, in the scope note above its Non-Functional Requirements.
 - **S-09: Guided weekly review (FR-015)** — Why parked: same 2026-09-14 scope call. Note this
   one was *unblocked* — S-05 shipped — so it is parked by choice, not by dependency. **Parks
   PRD must-have scope**; same caveat as S-08.

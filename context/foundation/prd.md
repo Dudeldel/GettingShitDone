@@ -169,6 +169,17 @@ inbox and run the GTD loop. Single user; built for personal use, not for a marke
   > lists'." Resolution: kept — the guided step-by-step review ritual has value in
   > its structure, independent of reminders (which are v2).
 
+> **Scope note, 2026-09-14 — FR-014 and FR-015 are parked, not delivered.**
+> Both are marked must-have above and both remain so; this note does not change
+> their priority. It records that `context/foundation/roadmap.md` parked their
+> slices (S-08 Eisenhower quadrants, S-09 weekly review) as a builder scope call,
+> so the MVP closes on what is built. The two documents therefore disagree on
+> purpose rather than by oversight, and the disagreement is open: either this PRD
+> is amended to match the shipped scope, or the slices come off the roadmap's
+> Parked list. Every other must-have FR is implemented. FR-013's inputs
+> (important/urgent) shipped with S-06, so S-08 is unblocked whenever it is taken
+> up; S-09 was never blocked at all.
+
 ## Non-Functional Requirements
 
 - **Capture is near-instant.** From opening capture to the idea being saved, the

@@ -19,13 +19,14 @@ The twin is a multi-tenant sharded microservice. This app is the opposite shape.
 
 - **No multi-tenancy.** Multi-user/sharing is a **permanent** non-goal (@context/foundation/prd.md). Never add `BelongsToTenant` / `BelongsToCompany`, `PartConnectionManager`, Central-vs-Part DB sharding, `ResolveTenantAuth` / `ResolveCompany` middleware, or tenant/company isolation. One user, one database.
 - **No tenant-scoped ability split.** The twin's `fixed-assets:read|write` per-tenant abilities and `ApiClient` model do not apply. Auth here is one account via Sanctum.
-- **Deploy is self-host on AWS Lightsail + GitHub Actions** (@context/foundation/tech-stack.md) — NOT the twin's Helm/K8s + Bitbucket Pipelines. Keep the *gates* (below), change the *host*.
+- **Deploy is Railway + GitHub Actions** (@context/foundation/tech-stack.md) — NOT the twin's Helm/K8s + Bitbucket Pipelines. Two Railway services (Laravel/Octane API + static React SPA) with managed MySQL; CI runs the quality gates, Railway builds on push. Keep the *gates* (below), change the *host*. (An AWS Lightsail co-location was the original plan and lost on a RAM-headroom gate — see @context/foundation/infrastructure.md. Do not reintroduce it.)
 
 ## Environment tripwires
 
 - **Composer is not global** — invoke it as `php composer.phar` from repo root (the phar lives there, git-ignored). Plain `composer` will fail.
-- **The REST API is not scaffolded yet.** Fresh scaffold has only `routes/web.php`. Run `php artisan install:api` to add `routes/api.php` + Sanctum before building endpoints (PRD requires a REST API with email+password auth).
-- **Most adopted tooling is not installed yet** (Pest, Larastan, Scramble). The scaffold ships PHPUnit + Pint only. There is no `Makefile` (the twin uses `make` targets; use the commands below).
+- **No `Makefile`** — the twin uses `make` targets; use the commands below instead.
+- **Tests run on SQLite `:memory:`, production runs MySQL** (`phpunit.xml`, `config/database.php`). Two consequences that have already bitten: `lockForUpdate` compiles to a no-op on SQLite, so a test can never prove a `FOR UPDATE` gate; and `:memory:` is one connection per test, so genuine concurrency is unreachable. CI has no MySQL service.
+- **The OpenAPI document is git-ignored and never generated in CI.** `php artisan scramble:export` writes `api.json` locally only. `tests/Feature/Api/ContractParityTest.php` generates it in process instead, which is what keeps the published contract honest — read that before changing a FormRequest's rules.
 
 ## Commands
 
@@ -34,19 +35,22 @@ Backend (repo root):
 ```bash
 php composer.phar setup        # install deps, .env, key:generate, migrate, build (first run)
 php composer.phar dev          # concurrent: artisan serve + queue:listen + pail (logs) + vite
-php composer.phar test         # config:clear + php artisan test  (currently PHPUnit)
+php composer.phar test         # config:clear + php artisan test  (Pest)
 php artisan test --filter=Name # run a single test (method or class name)
 php artisan test tests/Feature/FooTest.php   # run one file
 ./vendor/bin/pint              # format (auto-fix)
 ./vendor/bin/pint --test       # format check only (CI gate)
+./vendor/bin/phpstan analyse --memory-limit=512M   # Larastan level 6 (CI gate)
+php artisan scramble:export    # regenerate api.json (git-ignored, local only)
 ```
 
 Frontend (`cd frontend`):
 
 ```bash
 npm run dev      # vite dev server
-npm run build    # tsc -b && vite build
-npm run lint     # eslint
+npm run build    # tsc -b && vite build  (CI gate)
+npm run lint     # eslint                (CI gate)
+npm run test     # vitest                (CI gate)
 ```
 
 ## Nested rule files — read the one for the area you touch

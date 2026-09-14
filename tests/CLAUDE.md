@@ -2,9 +2,11 @@
 
 Rules for tests. See root @../CLAUDE.md for the project overview and @../app/CLAUDE.md for backend code conventions (the patterns these tests exercise).
 
-## Pest — the target framework (not yet installed)
+## Pest — the framework in use
 
-The scaffold currently ships PHPUnit `ExampleTest`s (`tests/Feature/ExampleTest.php`, `tests/Unit/ExampleTest.php`). **Pest** is the target — install it and migrate. The `pestphp/pest-plugin` is already pre-allowed in `composer.json`, so installation is frictionless.
+**Pest** is installed and the suite is migrated to it; there is no PHPUnit-style test left to convert. The backend suite is ~220 tests, the frontend ~145 under Vitest.
+
+`tests/Support/` holds autoloaded helper classes (`Tests\Support\…`) for anything too specific to belong in `tests/Pest.php`.
 
 Split tests:
 
