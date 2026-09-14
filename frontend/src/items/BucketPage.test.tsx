@@ -7,7 +7,7 @@ import type { GtdBucket } from '../api'
 import { AuthProvider } from '../auth/AuthContext'
 import { makeItem, server } from '../test/server'
 import { BucketPage } from './BucketPage'
-import { BUCKETS } from './buckets'
+import { BUCKETS, bucketLabel } from './buckets'
 
 /**
  * Mounts the real route so `useParams` reads a real `:bucket`, and an invalid URL exercises
@@ -48,6 +48,29 @@ describe('the eight bucket views (FR-009)', () => {
     renderBucket(`/bucket/${bucket}`)
 
     expect(await screen.findByText('an item here')).toBeInTheDocument()
+    // The heading must name the bucket you are actually in: mislabelling Next Actions as
+    // "Trash" is not cosmetic when the only destructive control lives one page away.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(bucketLabel(bucket))
+    // aria-current, so the nav says which list is open rather than only looking different.
+    expect(screen.getByRole('link', { name: bucketLabel(bucket) })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  it('points each nav link at its own bucket', () => {
+    listOnlyFor('reference', [])
+
+    renderBucket('/bucket/reference')
+
+    // A link COUNT is not reachability: every link could point at the Inbox and still count
+    // eight. Assert the targets.
+    for (const bucket of BUCKETS) {
+      expect(screen.getByRole('link', { name: bucketLabel(bucket) })).toHaveAttribute(
+        'href',
+        bucket === 'inbox' ? '/' : `/bucket/${bucket}`,
+      )
+    }
   })
 
   it('offers every bucket from any bucket', async () => {
@@ -181,7 +204,81 @@ describe('emptying the Trash', () => {
     await user.click(screen.getByRole('button', { name: /yes, discard them/i }))
 
     // A failed purge must never look like a successful one.
-    expect(await screen.findByText(/could not be emptied/i)).toBeInTheDocument()
+    // Through the label the region carries, not its message text — that label exists so this
+    // assertion does not have to know the copy.
+    expect(await screen.findByRole('alert', { name: /trash purge error/i })).toHaveTextContent(
+      /could not be emptied/i,
+    )
     expect(screen.getByText('junk')).toBeInTheDocument()
+  })
+})
+
+describe('the destructive control', () => {
+  it('reports the count the SERVER discarded, not the stale client one', async () => {
+    // The list was fetched on mount; anything reaching the Trash since makes items.length
+    // stale. On an operation with no undo the reported number must be the real one.
+    listOnlyFor('trash', [makeItem({ id: 1, title: 'junk', bucket: 'trash' })])
+    server.use(http.delete('*/api/trash', () => HttpResponse.json({ deleted: 4 })))
+
+    const { user } = renderBucket('/bucket/trash')
+    await screen.findByText('junk')
+    await user.click(screen.getByRole('button', { name: /empty the trash/i }))
+    await user.click(screen.getByRole('button', { name: /yes, discard them/i }))
+
+    expect(await screen.findByText(/discarded 4 items/i)).toBeInTheDocument()
+  })
+
+  it('focuses the safe choice, not the destructive one', async () => {
+    listOnlyFor('trash', [makeItem({ id: 1, title: 'junk', bucket: 'trash' })])
+
+    const { user } = renderBucket('/bucket/trash')
+    await screen.findByText('junk')
+    await user.click(screen.getByRole('button', { name: /empty the trash/i }))
+
+    // Revealing the confirmation unmounts the trigger; without an explicit move focus falls to
+    // <body>. It must land on "Keep them" so a reflexive Enter keeps the items.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /keep them/i })).toHaveFocus(),
+    )
+  })
+
+  it('backs out on Escape and clears a stale failure message', async () => {
+    listOnlyFor('trash', [makeItem({ id: 1, title: 'junk', bucket: 'trash' })])
+    server.use(
+      http.delete('*/api/trash', () =>
+        HttpResponse.json({ message: 'The Trash could not be emptied.' }, { status: 500 }),
+      ),
+    )
+
+    const { user } = renderBucket('/bucket/trash')
+    await screen.findByText('junk')
+    await user.click(screen.getByRole('button', { name: /empty the trash/i }))
+    await user.click(screen.getByRole('button', { name: /yes, discard them/i }))
+    await screen.findByRole('alert', { name: /trash purge error/i })
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('button', { name: /yes, discard them/i })).not.toBeInTheDocument()
+    // The error described an attempt that is over; it must not outlive it.
+    expect(screen.getByRole('alert', { name: /trash purge error/i })).toBeEmptyDOMElement()
+  })
+})
+
+describe('the Delegation view (FR-007)', () => {
+  it('shows who you are waiting on', async () => {
+    // The note IS the bucket's value — without it you know something is delegated but not whom
+    // to chase. S-02 stored it; nothing displayed it until now.
+    listOnlyFor('delegation', [
+      makeItem({
+        id: 1,
+        title: 'chase the invoice',
+        bucket: 'delegation',
+        delegatedTo: 'Ania — sent the contract on Tuesday',
+      }),
+    ])
+
+    renderBucket('/bucket/delegation')
+
+    expect(await screen.findByText(/ania — sent the contract on tuesday/i)).toBeInTheDocument()
   })
 })

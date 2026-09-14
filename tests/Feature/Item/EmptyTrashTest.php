@@ -4,6 +4,7 @@ use App\Domain\Item\GtdBucket;
 use App\Models\Item;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -79,6 +80,27 @@ it('emits the purge domain event with a count and no item text', function () {
         return $message === 'trash.emptied.success'
             && $context['event']['outcome'] === 'success'
             && $context['deleted_count'] === 1
+            && ! str_contains(json_encode($context), '4711');
+    });
+});
+
+it('reports a failed purge as 500 and never claims the Trash was emptied', function () {
+    // The failure class the sibling slices already guard: a swallowed QueryException returns
+    // {"deleted": 0} with HTTP 200, the SPA clears the list, and the user is told their bin was
+    // emptied when nothing was deleted. There is no undo, so a false success is the worst
+    // possible outcome here.
+    seedItem('my bank pin is 4711', GtdBucket::Trash);
+    Log::spy();
+    Schema::drop('items');
+
+    $response = test()->deleteJson('/api/trash');
+
+    $response->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
+    expect($response->getContent())->not->toContain('4711');
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $level === 'error'
+            && $message === 'trash.emptied.failure'
             && ! str_contains(json_encode($context), '4711');
     });
 });

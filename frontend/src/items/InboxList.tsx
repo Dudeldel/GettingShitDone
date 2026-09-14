@@ -37,6 +37,13 @@ export function InboxList({
               {item.note}
             </div>
           )}
+          {/* FR-007: Delegation IS the who/what note — without it the bucket records that
+              something is delegated but not whom to chase. Null for the other seven buckets. */}
+          {item.delegatedTo !== null && item.delegatedTo !== '' && (
+            <div style={{ color: 'var(--text)', fontSize: '0.9em' }}>
+              Waiting on: {item.delegatedTo}
+            </div>
+          )}
           <time dateTime={item.createdAt} style={{ color: 'var(--muted)', fontSize: '0.8em' }}>
             {capturedAt(item.createdAt)}
           </time>

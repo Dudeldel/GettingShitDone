@@ -89,3 +89,26 @@ it('emits a failure event and rethrows when the clarify write fails', function (
             && $context['reason'] === 'HY000';
     });
 });
+
+it('reports how many items the purge discarded', function () {
+    $repo = fakeItemRepository();
+
+    $count = (new ItemService($repo, new ClarifyDecision))->emptyTrash();
+
+    expect($repo->trashEmptied)->toBeTrue()
+        ->and($count)->toBe(3);
+});
+
+it('emits a failure event and rethrows when the purge fails', function () {
+    Log::spy();
+
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true), new ClarifyDecision))
+        ->emptyTrash())
+        ->toThrow(ItemPersistenceException::class);
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $level === 'error'
+            && $message === 'trash.emptied.failure'
+            && $context['reason'] === 'HY000';
+    });
+});

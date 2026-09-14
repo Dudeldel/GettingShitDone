@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
@@ -21,6 +21,8 @@ export function BucketPage() {
   const [purgeError, setPurgeError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [purging, setPurging] = useState(false)
+  const [discarded, setDiscarded] = useState<number | null>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
 
   const valid = isGtdBucket(bucket)
 
@@ -52,12 +54,25 @@ export function BucketPage() {
     }
   }, [bucket, valid])
 
+  // Focus the safe button when the confirmation appears: revealing it unmounts the trigger,
+  // which otherwise drops focus to <body> and leaves a keyboard user tabbing from the top.
+  useEffect(() => {
+    if (confirming) {
+      confirmRef.current?.focus()
+    }
+  }, [confirming])
+
   const purge = useCallback(async () => {
     setPurgeError(null)
     setPurging(true)
     try {
-      await emptyTrash()
+      // The server's count, not the client's items.length: the list was fetched on mount and
+      // anything that reached the Trash since (a quick-route from another tab, the API direct)
+      // makes the local number stale. On an operation with no undo, the number the user is told
+      // about afterwards has to be the one that actually happened.
+      const { deleted } = await emptyTrash()
       setItems([])
+      setDiscarded(deleted)
       setConfirming(false)
     } catch (err) {
       // The list stays exactly as it was — a failed purge must not look like a successful one.
@@ -96,7 +111,16 @@ export function BucketPage() {
       {/* The purge lives HERE and only here. A delete affordance on every bucket would be a
           generic remove verb, which is exactly what this slice is shaped to avoid. */}
       {bucket === 'trash' && items.length > 0 && (
-        <section aria-label="Empty the Trash" style={{ marginTop: '1.5rem' }}>
+        <section
+          aria-label="Empty the Trash"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && confirming && !purging) {
+              setConfirming(false)
+              setPurgeError(null)
+            }
+          }}
+          style={{ marginTop: '1.5rem' }}
+        >
           {!confirming && (
             <button type="button" onClick={() => setConfirming(true)}>
               Empty the Trash
@@ -108,10 +132,27 @@ export function BucketPage() {
                 Permanently discard {items.length}{' '}
                 {items.length === 1 ? 'item' : 'items'}? This cannot be undone.
               </p>
-              <button type="button" disabled={purging} onClick={() => void purge()}>
+              {/* The destructive choice is the one that looks dangerous, and it is NOT the one
+                  that takes focus — a keyboard user who hits Enter on reflex must keep their
+                  items, not lose them. */}
+              <button
+                type="button"
+                disabled={purging}
+                onClick={() => void purge()}
+                style={{ color: 'var(--error)', fontWeight: 600 }}
+              >
                 {purging ? 'Discarding…' : 'Yes, discard them'}
               </button>
-              <button type="button" disabled={purging} onClick={() => setConfirming(false)}>
+              <button
+                ref={confirmRef}
+                type="button"
+                disabled={purging}
+                onClick={() => {
+                  setConfirming(false)
+                  // F9: a stale failure message must not outlive the attempt it describes.
+                  setPurgeError(null)
+                }}
+              >
                 Keep them
               </button>
             </>
@@ -124,6 +165,11 @@ export function BucketPage() {
       <p aria-label="Trash purge error" role="alert" style={{ color: 'var(--error)' }}>
         {purgeError ?? ''}
       </p>
+      {discarded !== null && (
+        <p role="status" style={{ color: 'var(--muted)' }}>
+          Discarded {discarded} {discarded === 1 ? 'item' : 'items'}.
+        </p>
+      )}
     </main>
   )
 }
