@@ -465,8 +465,17 @@ path already satisfies.
 
 **Contract**: Replace the two render branches at `:84-85` with the form given in Critical
 Implementation Details. Extract `messageFor` out of `CaptureForm.tsx` into a shared module
-(both components now need it) and use it at `:36` in place of the raw message. Extraction
-is mechanical — no behaviour change to the capture path, which Phase 3's tests already pin.
+(both components now need it) and use it at `:36` in place of the raw message.
+
+**CORRECTION (impl-review F7, 2026-09-14).** This entry originally read "Extraction is
+mechanical — no behaviour change to the capture path, which Phase 3's tests already pin",
+and used that to justify adding no tests. Both halves were false. The extraction rewords the
+transport message and appends "Your text is still here." to *every* capture failure rather
+than only transport ones, so every 422/429/500 message differs from what Phase 3 shipped.
+And Phase 3's tests could not have pinned it: they assert on fragments by design (correctly —
+snapshotting error copy is an anti-pattern here), so the trailing clause was invisible to
+them. A "the tests already cover it" justification is only valid when the assertions can
+actually see the thing. Coverage added under F6.
 
 ### Success Criteria:
 
@@ -605,6 +614,43 @@ behaviour and its own tests go with it.
   (F1, F2, F3, F5) and `…/impl-review-phase-2.md` (F2 "a test that cannot fail")
 - Reference tests: `tests/Feature/Item/CaptureItemTest.php`, `tests/Feature/Item/ListItemsTest.php`
 - Contract registry: `docs/reference/contract-surfaces.md`
+
+---
+
+## Addendum — deviations from this plan (impl-review F8, 2026-09-14)
+
+The plan body was never amended during implementation: across all five commits the only
+edits to this file were Progress checkboxes. Each deviation below was decided and approved
+in-session and explained in its commit message, but a reader trusting this plan as the
+record of what was built would have been wrong about all three. Recorded here rather than
+rewritten into the phase entries, so the approved plan and what actually happened stay
+separable.
+
+1. **`frontend/src/api.ts` was changed in Phase 2**, which lists no production file under
+   "Changes Required". The `AbortSignal.timeout` probe produced a third outcome neither the
+   research nor this plan anticipated — the rejection carries `name === 'TimeoutError'` but
+   fails `instanceof DOMException`, because jsdom installs its own `DOMException` global
+   while the rejection originates in Node's realm. The plan's stated fallback was to
+   manufacture the rejection; that was rejected as re-admitting the very anti-pattern the
+   phase exists to avoid, and the check was relaxed to match on `name` instead. Phase 2's
+   gate could not go green without it.
+
+2. **`frontend/src/AppRoutes.tsx` is a new production module** that appears nowhere in this
+   plan. Phase 3 requires mounting "the router + `AuthProvider` tree as `main.tsx` composes
+   it"; extracting the route tree is how that was satisfied, in preference to a replica in
+   the test file that could drift from the real composition.
+
+3. **Progress item 5.5 credits `60c76c3` with the §2 backport, which is wrong.** The entire
+   backport shipped in `5d6341f` (Phase 1), because it was approved during planning and the
+   file was untracked until then; `60c76c3` changed nothing in §2. The content is correct
+   and present — only the phase attribution was not.
+
+Also corrected at review time: Phase 4's "extraction is mechanical" justification (see the
+CORRECTION note in that phase), and five Phase 3 contract items that were checked complete
+without being implemented — the conditional-clear guard, the focus-restoration assertion,
+draft survival across an explicit logout, and the tab-close boundary note now exist; the
+408 assertion stays relocated to `src/test/abort-signal.probe.test.ts`, which asserts the
+client mapping against a real timeout rather than the message reaching the screen.
 
 ## Progress
 

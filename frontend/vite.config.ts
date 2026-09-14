@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
+    // Required by the private-window test, which replaces the sessionStorage global
+    // outright (vi.spyOn cannot touch it under jsdom — see CaptureForm.test.tsx).
+    unstubGlobals: true,
   },
 })

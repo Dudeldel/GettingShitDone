@@ -104,8 +104,40 @@ describe('a 401 during capture', () => {
     await user.type(screen.getByLabelText(/email/i), TEST_USER.email)
     await user.type(screen.getByLabelText(/password/i), 'correct horse')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
-
     await screen.findByLabelText(/catch an idea/i)
+
+    // Returning to /login is what actually asserts the flag was cleared. Checking for the
+    // notice straight after login proves nothing: a successful login navigates away and
+    // unmounts LoginPage wholesale, so the notice is absent whether the flag was reset,
+    // left untouched, or latched true forever — all three were verified to pass.
+    await user.click(screen.getByRole('button', { name: /log out/i }))
+
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument()
     expect(screen.queryByText(/session expired/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('an explicit logout', () => {
+  it('keeps the typed idea waiting, and does not claim the session expired', async () => {
+    const { user } = renderApp()
+
+    await user.type(await screen.findByLabelText(/catch an idea/i), 'typed then logged out')
+    await user.click(screen.getByRole('button', { name: /log out/i }))
+    await screen.findByRole('heading', { name: /sign in/i })
+
+    // Leaving voluntarily is not an expired session — the notice would be a lie here.
+    expect(screen.queryByText(/session expired/i)).not.toBeInTheDocument()
+
+    server.use(
+      http.post('*/api/login', () =>
+        HttpResponse.json({ token: 'a-fresh-token', user: TEST_USER }),
+      ),
+    )
+    await user.type(screen.getByLabelText(/email/i), TEST_USER.email)
+    await user.type(screen.getByLabelText(/password/i), 'correct horse')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    const restored = await screen.findByLabelText(/catch an idea/i)
+    await waitFor(() => expect(restored).toHaveValue('typed then logged out'))
   })
 })

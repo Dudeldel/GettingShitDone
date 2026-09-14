@@ -2,20 +2,52 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 // Without this a black-holing connection (captive portal, dropped VPN) leaves the
 // promise unsettled forever, so the UI can never report success or failure.
-const REQUEST_TIMEOUT_MS = 10_000
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000
+
+// Overridable purely as a test seam: exercising the timeout path against the real ten
+// seconds cost ~91% of the frontend suite's wall time on every push, and left only 50%
+// headroom before a slow runner would report it as a broken 408 mapping. Production never
+// calls the setter.
+let requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
+
+export function setRequestTimeoutForTests(ms: number): void {
+  requestTimeoutMs = ms
+}
 const TIMEOUT_STATUS = 408
 const TOKEN_KEY = 'gsd_token'
 
+// Storage access can throw outright, not just return null, when the browser blocks site
+// data — Safari's "Block All Cookies", a partitioned third-party context, a full quota.
+// getToken() runs inside AuthProvider's useState initializer, i.e. during render and
+// outside any try, so an unguarded throw there white-screens the whole app before an error
+// boundary could even catch it. Falling back to memory costs the session its survival
+// across a reload in those browsers, which is a far better failure than a blank page.
+let memoryToken: string | null = null
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    return memoryToken
+  }
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
+  memoryToken = token
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    // The in-memory copy above is the fallback.
+  }
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY)
+  memoryToken = null
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // The in-memory copy above is already cleared.
+  }
 }
 
 export class ApiError extends Error {
@@ -50,7 +82,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers,
-      signal: options.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: options.signal ?? AbortSignal.timeout(requestTimeoutMs),
     })
   } catch (err) {
     // Matched by name rather than `instanceof DOMException`, because the check has to

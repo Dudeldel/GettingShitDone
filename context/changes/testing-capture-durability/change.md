@@ -1,7 +1,7 @@
 ---
 change_id: testing-capture-durability
 title: Test rollout phase 1 — capture durability and error surfacing
-status: implemented
+status: impl_reviewed
 created: 2026-09-14
 updated: 2026-09-14
 archived_at: null

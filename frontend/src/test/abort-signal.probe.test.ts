@@ -1,7 +1,23 @@
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
-import { ApiError, listItems } from '../api'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  ApiError,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  listItems,
+  setRequestTimeoutForTests,
+} from '../api'
 import { server } from './server'
+
+// Against the real ten-second default this file was ~91% of the whole suite's wall time,
+// with only 50% headroom before a slow runner would report it as a broken 408 mapping
+// rather than as slowness. The assertions below are unchanged; only the clock is.
+beforeEach(() => {
+  setRequestTimeoutForTests(50)
+})
+
+afterEach(() => {
+  setRequestTimeoutForTests(DEFAULT_REQUEST_TIMEOUT_MS)
+})
 
 /**
  * Settles research Open Question #1: can the 408 branch of api.ts be tested here?
@@ -52,5 +68,5 @@ describe('AbortSignal.timeout in this environment', () => {
     await expect(listItems()).rejects.toSatisfy(
       (err: unknown) => err instanceof ApiError && err.status === 408,
     )
-  }, 15_000)
+  })
 })

@@ -112,6 +112,15 @@ describe('CaptureForm — failures reach the user', () => {
   })
 })
 
+/**
+ * Scope of "the typed text survives": the tab session.
+ *
+ * The draft lives in sessionStorage, so it survives a failed capture, a 401 bounce, an
+ * explicit logout (see CaptureForm.401.test.tsx) and a refresh — but NOT closing the tab.
+ * That boundary is a deliberate decision, not an oversight: moving to localStorage would
+ * persist the app's most personal text indefinitely on a possibly-shared device. There is
+ * deliberately no test for tab-close, because there is deliberately no guarantee.
+ */
 describe('CaptureForm — the typed text survives', () => {
   it('leaves the text in the field after a failure', async () => {
     respondToCaptureWith(
@@ -123,6 +132,20 @@ describe('CaptureForm — the typed text survives', () => {
     expect(screen.getByLabelText(/catch an idea/i)).toHaveValue('an idea worth keeping')
   })
 
+  it('says so, on every kind of failure, not just a dropped connection', async () => {
+    // The reassurance moved out of the shared mapper and onto this screen in p4, which
+    // widened it from transport-only to every failure. Nothing asserted it until now, and
+    // the loose fragment matching used elsewhere could never have caught its removal.
+    respondToCaptureWith(
+      HttpResponse.json({ message: 'The title field is required.' }, { status: 422 }),
+    )
+    expect(await captureAndReadMessage('a 422 idea')).toMatch(/still here/i)
+
+    cleanup()
+    respondToCaptureWith(HttpResponse.error())
+    expect(await captureAndReadMessage('a transport idea')).toMatch(/still here/i)
+  })
+
   it('restores the draft when the form is mounted again', async () => {
     respondToCaptureWith(
       HttpResponse.json({ message: 'The item could not be saved.' }, { status: 500 }),
@@ -131,26 +154,43 @@ describe('CaptureForm — the typed text survives', () => {
 
     // A remount is what the user gets after a 401 bounce, an explicit logout, or a refresh
     // — the component is rebuilt from scratch and the draft has to come back with it.
-    const { unmount } = render(<CaptureForm onCaptured={() => {}} />)
-    unmount()
+    //
+    // cleanup() first, and this is load-bearing: the helper above left a form mounted that
+    // still holds the text in useState. Without this the assertion read THAT form and
+    // passed with draft restoration entirely disabled. Every input shares
+    // id="capture-title", so label lookup resolves via document.getElementById and returns
+    // only the first match — the remounted form was not even reachable.
+    cleanup()
     render(<CaptureForm onCaptured={() => {}} />)
 
-    expect(screen.getAllByLabelText(/catch an idea/i)[0]).toHaveValue('survives a remount')
+    expect(screen.getByLabelText(/catch an idea/i)).toHaveValue('survives a remount')
   })
 
   it('still works when the draft store is unavailable, as in a private window', async () => {
     // CaptureForm guards every sessionStorage call; prove the guard, not just its presence.
     //
-    // Scoped to sessionStorage deliberately. Stubbing Storage.prototype also breaks
-    // localStorage, and api.ts's getToken() reads that WITHOUT a guard — so the request
-    // would never be sent and this test would "pass" for the wrong reason. That unguarded
-    // read is a real (if narrow) gap, noted for a later change rather than widened into
-    // this one.
-    vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
-      throw new DOMException('QuotaExceededError')
-    })
-    vi.spyOn(sessionStorage, 'getItem').mockImplementation(() => {
-      throw new DOMException('SecurityError')
+    // vi.stubGlobal, NOT vi.spyOn. jsdom 30 wraps Storage in a Proxy whose defineProperty
+    // trap silently refuses a spy — no error, no effect, spy call count zero — so a
+    // spyOn-based version of this test ran the plain happy path and stayed green with every
+    // try/catch deleted from the component. Replacing the whole global does reach it.
+    //
+    // Scoped to sessionStorage deliberately: replacing localStorage too would break
+    // api.ts's getToken() and the request would never be sent, making this pass for a
+    // second wrong reason.
+    vi.stubGlobal('sessionStorage', {
+      getItem: () => {
+        throw new DOMException('SecurityError')
+      },
+      setItem: () => {
+        throw new DOMException('QuotaExceededError')
+      },
+      removeItem: () => {
+        throw new DOMException('SecurityError')
+      },
+      // Left harmless: setup.ts clears storage after every test.
+      clear: () => {},
+      key: () => null,
+      length: 0,
     })
 
     const captured: Item[] = []
@@ -181,6 +221,35 @@ describe('CaptureForm — the confirmation', () => {
     expect(captured).toHaveLength(1)
   })
 
+  it('does not eat text typed while the capture is in flight', async () => {
+    // The input stays enabled during the round trip on purpose (disabling it blurs the
+    // field and drops keystrokes), so the clear at CaptureForm.tsx:68-73 is conditional on
+    // the value still being the one that was submitted. Until now that guard had no test:
+    // making the clear unconditional would silently destroy the next idea.
+    let release!: () => void
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.post('*/api/items', async () => {
+        await inFlight
+
+        return HttpResponse.json(makeItem({ id: 9, title: 'first idea' }), { status: 201 })
+      }),
+    )
+
+    const { user } = renderForm()
+    const field = screen.getByLabelText(/catch an idea/i)
+    await user.type(field, 'first idea')
+    await user.click(screen.getByRole('button', { name: /capture/i }))
+
+    await user.type(field, ' and the next one')
+    release()
+
+    await screen.findByText(/saved to your inbox/i)
+    expect(field).toHaveValue('first idea and the next one')
+  })
+
   it('refuses a whitespace-only capture without calling the API', async () => {
     let called = false
     server.use(
@@ -198,5 +267,7 @@ describe('CaptureForm — the confirmation', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/type something first/i)
     expect(called).toBe(false)
     expect(screen.queryByText(/saved to your inbox/i)).not.toBeInTheDocument()
+    // Focus must come back, or correcting the mistake costs the user a click.
+    expect(screen.getByLabelText(/catch an idea/i)).toHaveFocus()
   })
 })
