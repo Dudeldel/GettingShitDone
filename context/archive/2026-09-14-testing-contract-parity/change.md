@@ -1,10 +1,10 @@
 ---
 change_id: testing-contract-parity
 title: Prove the published API contract is the one actually enforced
-status: implemented
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T19:07:06Z
 ---
 
 ## Notes
