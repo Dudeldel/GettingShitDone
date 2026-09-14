@@ -143,3 +143,27 @@ deferral, and a done marker rendered unconditionally.
 **Also fixed in passing:** backing out of the quick-route's delegation note landed the user
 on "can someone else do it?" — a tree question they never entered — and answering it filed
 the item somewhere they never chose. Shipped in S-02; found while extending `previousStep`.
+
+## Implementation review
+
+`reviews/impl-review.md` — REJECTED on one critical finding, all ten fixed.
+
+The critical one is worth carrying forward: **the service asked the request whether a timer
+had run, instead of asking the decision.** The decision tree ignores timer answers on the
+paths that never ask the question, and the FormRequest did not refuse them there — so a
+multi-step item filed in Projects, `completed_at` null, wrote `clarify.two_minute_rule.done`
+with seven loops. The record FR-006 exists to produce was forgeable by any authenticated
+caller, and the two halves of the same event contradicted each other. Reproduced against the
+running API before the fix and after it (now a 422, nothing logged).
+
+The fix puts the timer facts on `ClarifyOutcome` — the only object that knows the branch was
+walked — and deletes `ClarifyItemPayload::tookTheTwoMinuteBranch()` so the wrong question
+cannot be asked again from anywhere.
+
+Second worth carrying: an S-02 test named "does not ask about the two-minute rule — that
+question belongs to S-03" **survived this slice unchanged and green**, because it looked one
+step before the question it denied. A test that names a behaviour has to be re-read when that
+behaviour arrives; the suite passing is not evidence that it was.
+
+Review fixes verified the same way as the slice: 11 further mutations, 11 killed (one only
+after adding loop-count coverage that every existing test had left at zero).

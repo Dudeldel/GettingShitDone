@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Clarify\ClarifyDecision;
+use App\Domain\Clarify\TwoMinuteOutcome;
 use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
@@ -111,4 +112,62 @@ it('emits a failure event and rethrows when the purge fails', function () {
             && $message === 'trash.emptied.failure'
             && $context['reason'] === 'HY000';
     });
+});
+
+/**
+ * FR-006's record, at the seam where it is decided.
+ *
+ * These are the tests the implementation review found missing — and the ones that would
+ * have caught the defect it found instead: the service used to ask the PAYLOAD whether a
+ * timer had run, so timer answers attached to a path that never asks the question produced
+ * a "completed timer" log line for an item filed somewhere else entirely.
+ */
+it('records the timer outcome the DOMAIN decided, not the one the request claimed', function () {
+    Log::spy();
+
+    (new ItemService(fakeItemRepository(), new ClarifyDecision))->clarify(7, ClarifyItemPayload::treePath(
+        actionable: true,
+        singleStep: true,
+        twoMinutes: true,
+        twoMinuteOutcome: TwoMinuteOutcome::Deferred,
+        twoMinuteLoops: 3,
+        delegable: false,
+    ));
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $message === 'clarify.two_minute_rule.deferred'
+            && $context['item_id'] === 7
+            && $context['two_minute_loops'] === 3;
+    });
+});
+
+it('records nothing about a timer on a branch that never asks the question', function () {
+    // The forged payload: a multi-step item claiming a completed two-minute timer. The tree
+    // files it in Projects and leaves completed_at null, so a log line saying the timer
+    // finished would contradict the item's own state — and that contradiction was reachable.
+    Log::spy();
+
+    $dto = (new ItemService(fakeItemRepository(), new ClarifyDecision))->clarify(7, ClarifyItemPayload::treePath(
+        actionable: true,
+        singleStep: false,
+        twoMinutes: true,
+        twoMinuteOutcome: TwoMinuteOutcome::Done,
+        twoMinuteLoops: 7,
+    ));
+
+    expect($dto->bucket)->toBe(GtdBucket::Projects)
+        ->and($dto->completedAt)->toBeNull();
+
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.done', Mockery::any()]);
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.deferred', Mockery::any()]);
+});
+
+it('does not report a timer for an item filed by the quick-route', function () {
+    Log::spy();
+
+    (new ItemService(fakeItemRepository(), new ClarifyDecision))
+        ->clarify(7, ClarifyItemPayload::quickRoute(GtdBucket::Reference));
+
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.done', Mockery::any()]);
+    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.deferred', Mockery::any()]);
 });

@@ -119,7 +119,11 @@ class ClarifyDecision
             }
 
             if ($payload->twoMinuteOutcome === TwoMinuteOutcome::Done) {
-                return ClarifyOutcome::completedInTwoMinutes();
+                // Returns before the delegable answer is read, which is the ordering itself
+                // expressed as control flow: a finished item cannot also be waiting on
+                // somebody. A delegation answer riding along is therefore discarded here —
+                // the FormRequest is what refuses the contradiction outright.
+                return ClarifyOutcome::completedInTwoMinutes($payload->twoMinuteLoops);
             }
             // Deferred: the item is still unfiled, so it carries on to the last question.
         }
@@ -128,9 +132,16 @@ class ClarifyDecision
             throw InvalidClarificationException::missingDelegableAnswer();
         }
 
-        return $payload->delegable
+        $outcome = $payload->delegable
             ? $this->delegation($payload)
             : ClarifyOutcome::to(GtdBucket::NextActions);
+
+        // Stamped only on the branch that actually ran a timer. This is the sole path by
+        // which a deferral becomes a recorded fact, so nothing downstream has to re-derive
+        // it from the request — where it would be indistinguishable from a forgery.
+        return $payload->twoMinutes
+            ? $outcome->deferredAfterTwoMinutes($payload->twoMinuteLoops)
+            : $outcome;
     }
 
     /** FR-007: free-text who/what, never a contact or user account. */

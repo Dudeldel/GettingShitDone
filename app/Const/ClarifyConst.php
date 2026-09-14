@@ -3,8 +3,13 @@
 namespace App\Const;
 
 /**
- * Domain constants for the clarify workflow. Bound to a single source so the backend, the
- * SPA countdown and any test that asserts on the threshold cannot drift apart.
+ * Domain constants for the clarify workflow.
+ *
+ * TWO_MINUTE_SECONDS is stated here and mirrored once in the SPA (frontend/src/api.ts),
+ * because the timer itself is client-side — nothing in this codebase consumes the value at
+ * runtime. That makes the usual "single source" claim unenforceable by ordinary use, so
+ * tests/Unit/Clarify/TwoMinuteThresholdContractTest.php reads the TypeScript and fails when
+ * the two drift apart. Change one, and that test tells you about the other.
  */
 final class ClarifyConst
 {

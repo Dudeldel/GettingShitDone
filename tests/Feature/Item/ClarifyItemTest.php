@@ -311,7 +311,10 @@ it('completes an item finished inside the two-minute timer', function () {
         'singleStep' => true,
         'twoMinutes' => true,
         'twoMinuteOutcome' => 'done',
-        'twoMinuteLoops' => 0,
+        // Non-zero: with 0 here, an implementation that hardcoded the loop count would look
+        // identical to one that carried it, and the "records the outcome" half of FR-006
+        // would be untested on the path where the user finished the job.
+        'twoMinuteLoops' => 2,
     ])->assertStatus(Response::HTTP_OK)
         ->assertJsonPath('bucket', 'next_actions');
 
@@ -328,6 +331,24 @@ it('completes an item finished inside the two-minute timer', function () {
 
     // And gone from the Inbox — a completed item is still a clarified item (FR-008).
     test()->getJson('/api/items')->assertJsonCount(0);
+});
+
+it('records how many times the user looped before finishing', function () {
+    $id = captureForClarify('reply to the landlord');
+    Log::spy();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'twoMinuteLoops' => 2,
+    ])->assertStatus(Response::HTTP_OK);
+
+    Log::shouldHaveReceived('log')->withArgs(function ($level, $message, $context) {
+        return $message === 'clarify.two_minute_rule.done'
+            && $context['two_minute_loops'] === 2;
+    });
 });
 
 it('leaves a deferred item unfinished and still in the tree', function () {
@@ -410,11 +431,15 @@ it('refuses a timer outcome for a timer that never ran', function () {
 it('refuses two-minute answers on the quick-route, which asks no questions', function () {
     $id = captureForClarify();
 
+    // All three fields, and the failing key named: asserting a bare 422 left the
+    // `prohibits` list free to drop a field without any test noticing.
     test()->postJson("/api/items/{$id}/clarify", [
         'quickRouteBucket' => 'next_actions',
         'twoMinutes' => true,
         'twoMinuteOutcome' => 'done',
-    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
+        'twoMinuteLoops' => 2,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['quickRouteBucket']);
 
     test()->getJson('/api/items')->assertJsonCount(1);
 });
@@ -467,6 +492,57 @@ it('records nothing about a timer for an item that never triggered one', functio
         'delegable' => false,
     ])->assertStatus(Response::HTTP_OK);
 
-    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.done', Mockery::any()]);
-    Log::shouldNotHaveReceived('log', ['info', 'clarify.two_minute_rule.deferred', Mockery::any()]);
+    // Matched by PREFIX, so any two-minute event at all reddens this. Naming the two exact
+    // messages meant both halves of the emit guard had to break before the test could fail;
+    // Mockery::on() narrows the spy to the message argument without pinning its value.
+    Log::shouldNotHaveReceived('log', [
+        Mockery::any(),
+        Mockery::on(fn ($message) => str_starts_with((string) $message, 'clarify.two_minute_rule.')),
+        Mockery::any(),
+    ]);
+});
+
+it('refuses timer answers on a branch that never asks the question', function () {
+    // The defect the implementation review found: these fields used to be accepted on a
+    // multi-step payload, ignored by the decision tree, and then logged anyway — so an item
+    // sitting in Projects with completed_at null had a "completed two-minute timer" recorded
+    // against it. The record FR-006 asks for must not be forgeable.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => false,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'twoMinuteLoops' => 7,
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['twoMinutes']);
+
+    test()->getJson('/api/items')->assertJsonCount(1);
+});
+
+it('refuses timer answers on a non-actionable payload', function () {
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => false,
+        'nonActionableDestination' => 'trash',
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['twoMinutes']);
+});
+
+it('refuses to name who you are waiting on for something already finished', function () {
+    // The other half of the contradiction the delegable rule refuses.
+    $id = captureForClarify();
+
+    test()->postJson("/api/items/{$id}/clarify", [
+        'actionable' => true,
+        'singleStep' => true,
+        'twoMinutes' => true,
+        'twoMinuteOutcome' => 'done',
+        'delegatedTo' => 'Ania',
+    ])->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->assertJsonValidationErrors(['delegatedTo']);
 });

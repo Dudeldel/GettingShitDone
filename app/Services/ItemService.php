@@ -75,10 +75,13 @@ class ItemService
 
         LogEvent::itemClarified($item->id, $item->bucket);
 
-        // FR-006 asks for the timer's outcome to be RECORDED, not merely acted on. Emitted
-        // after the write, so a logged timer always corresponds to an item that really moved.
-        if ($payload->tookTheTwoMinuteBranch() && $payload->twoMinuteOutcome !== null) {
-            LogEvent::twoMinuteRuleApplied($item->id, $payload->twoMinuteOutcome, $payload->twoMinuteLoops);
+        // FR-006 asks for the timer's outcome to be RECORDED, not merely acted on. Read off
+        // the OUTCOME, never the payload: the payload only says what a client sent, and the
+        // decision tree ignores timer answers on the paths that never ask the question — so
+        // trusting it here logs a completed two-minute timer for an item filed in Projects.
+        // Emitted after the write, so a logged timer always matches an item that really moved.
+        if ($outcome->twoMinuteOutcome !== null) {
+            LogEvent::twoMinuteRuleApplied($item->id, $outcome->twoMinuteOutcome, $outcome->twoMinuteLoops);
         }
 
         return $item;

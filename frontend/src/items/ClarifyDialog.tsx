@@ -84,8 +84,14 @@ export function ClarifyDialog({
   // Only ticks while the timer step is on screen, and `loops` is a dependency so asking for
   // more time tears the interval down and starts a fresh one — otherwise the restarted
   // countdown would inherit whatever fraction of a second was left on the old tick.
+  //
+  // `expired` rather than `secondsLeft` in the deps: a boolean flips once, so the effect
+  // re-runs exactly once at zero and then stops rescheduling. Depending on the number itself
+  // would rebuild the interval every second and reset its phase on each tick.
+  const expired = secondsLeft === 0
+
   useEffect(() => {
-    if (step !== 'timer') {
+    if (step !== 'timer' || expired) {
       return
     }
 
@@ -94,7 +100,14 @@ export function ClarifyDialog({
     }, 1000)
 
     return () => clearInterval(id)
-  }, [step, loops])
+  }, [step, loops, expired])
+
+  // A message describes the attempt that produced it. Moving to another question ends that
+  // attempt, so "Say who you are waiting on." must not follow the user into a different one
+  // — nor may the input it marked stay flagged as invalid.
+  useEffect(() => {
+    setError(null)
+  }, [step])
 
   async function send(answers: ClarifyAnswers): Promise<void> {
     setError(null)
@@ -281,7 +294,7 @@ export function ClarifyDialog({
             {formatClock(secondsLeft)}
           </p>
           <p role="status" style={{ color: 'var(--muted)' }}>
-            {secondsLeft === 0
+            {expired
               ? 'Time is up. Finish it, take another two minutes, or file it instead.'
               : 'Two minutes on the clock.'}
           </p>
@@ -392,6 +405,14 @@ export function ClarifyDialog({
             // question the user has just answered differently.
             if (previous === 'singleStep' || previous === 'twoMinutes') {
               restartTwoMinuteRule()
+            }
+            // Returning to the fork drops the quick-route target as well. Without this a
+            // destination picked earlier survives a walk back through "is it actionable?"
+            // and hijacks the delegation submit below: the item still lands in Delegation
+            // with the right note, so nothing looks wrong, while the server is told the
+            // user skipped the questions and the whole two-minute record is discarded.
+            if (previous === 'actionable') {
+              setQuickRouteTarget(null)
             }
             setStep(previous)
           }}

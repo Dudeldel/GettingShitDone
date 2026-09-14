@@ -74,12 +74,6 @@ class ClarifyItemPayload
         );
     }
 
-    /** FR-006: the user answered "< 2 min?" with yes, so a timer ran. */
-    public function tookTheTwoMinuteBranch(): bool
-    {
-        return $this->twoMinutes === true;
-    }
-
     public function isQuickRoute(): bool
     {
         return $this->quickRouteBucket !== null;

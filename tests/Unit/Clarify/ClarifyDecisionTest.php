@@ -205,6 +205,50 @@ describe('the two-minute rule (FR-006)', function () {
             ->and($outcome->bucket)->toBe(GtdBucket::NextActions);
     });
 
+    it('carries the timer facts on the outcome, where they cannot be forged', function () {
+        // The outcome is the only object that knows the branch was walked, so whatever is
+        // recorded downstream has to come from here. Zero loops would lose the fact that the
+        // user underestimated the job twice before finishing it.
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Done,
+            twoMinuteLoops: 2,
+        ));
+
+        expect($outcome->twoMinuteOutcome)->toBe(TwoMinuteOutcome::Done)
+            ->and($outcome->twoMinuteLoops)->toBe(2);
+    });
+
+    it('carries the loop count through a deferral to the branch that files the item', function () {
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: true,
+            twoMinuteOutcome: TwoMinuteOutcome::Deferred,
+            twoMinuteLoops: 4,
+            delegable: true,
+            delegatedTo: 'Ania',
+        ));
+
+        expect($outcome->bucket)->toBe(GtdBucket::Delegation)
+            ->and($outcome->twoMinuteOutcome)->toBe(TwoMinuteOutcome::Deferred)
+            ->and($outcome->twoMinuteLoops)->toBe(4);
+    });
+
+    it('leaves the timer facts empty on a branch that never ran one', function () {
+        $outcome = (new ClarifyDecision)->decide(ClarifyItemPayload::treePath(
+            actionable: true,
+            singleStep: true,
+            twoMinutes: false,
+            delegable: false,
+        ));
+
+        expect($outcome->twoMinuteOutcome)->toBeNull()
+            ->and($outcome->twoMinuteLoops)->toBe(0);
+    });
+
     it('never asks about delegation once the item is already done', function () {
         // Ordering, expressed as behaviour: the done branch terminates BEFORE "can it be
         // delegated?" is consulted. If the questions were reordered, or the done branch fell

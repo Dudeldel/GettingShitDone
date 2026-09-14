@@ -54,7 +54,7 @@ describe('an item finished under the two-minute rule (FR-006)', () => {
     // Still listed: there is no Done bucket, and an item vanishing the moment the user
     // finishes it is indistinguishable from one that was lost.
     expect(screen.getByText('reply to the landlord')).toBeInTheDocument()
-    expect(screen.getByText(/done/i)).toBeInTheDocument()
+    expect(screen.getByText('✓ Done')).toBeInTheDocument()
   })
 
   it('does not mark an unfinished item as done', () => {
@@ -62,6 +62,6 @@ describe('an item finished under the two-minute rule (FR-006)', () => {
 
     // The marker has to depend on completedAt. One rendered unconditionally would look
     // right on the screen above and label every open action as finished.
-    expect(screen.queryByText(/done/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('✓ Done')).not.toBeInTheDocument()
   })
 })

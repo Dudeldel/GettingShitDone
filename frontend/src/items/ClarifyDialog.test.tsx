@@ -74,12 +74,19 @@ describe('the question order (FR-003)', () => {
     expect(screen.getByText('Is it actionable?')).toBeInTheDocument()
   })
 
-  it('does not ask about the two-minute rule — that question belongs to S-03', async () => {
+  it('does not ask about the two-minute rule before the item is a single step', async () => {
+    // This replaces an S-02 test that asserted the question is never asked at all. It kept
+    // passing after S-03 shipped it, because it looked one step too early — green for a
+    // feature it claimed did not exist. What is worth pinning is its POSITION in the order.
     const { user } = renderDialog()
 
-    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    expect(screen.queryByText(/two minutes/i)).not.toBeInTheDocument()
 
-    expect(screen.queryByText(/2 min|two minute/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    expect(screen.queryByText(/two minutes/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    expect(screen.getByText(/less than two minutes/i)).toBeInTheDocument()
   })
 })
 
@@ -284,6 +291,23 @@ describe('the two-minute rule (FR-006)', () => {
     return rendered
   }
 
+  /**
+   * The countdown as a number of seconds.
+   *
+   * Assertions go through this and compare DELTAS rather than exact strings, because
+   * `shouldAdvanceTime` ticks the fake clock along with real time: an exact "0:59" had only
+   * about a second of wall-clock headroom between mounting the interval and the assertion.
+   * A delta cancels whatever drift accrued before the measurement started.
+   */
+  function readClock(): number {
+    const [minutes, seconds] = screen
+      .getByText(/^\d:\d{2}$/)
+      .textContent!.split(':')
+      .map(Number)
+
+    return minutes * 60 + seconds
+  }
+
   async function startTheTimer() {
     const rendered = await reachTheTwoMinuteQuestion()
     await rendered.user.click(screen.getByRole('button', { name: /do it now/i }))
@@ -303,19 +327,23 @@ describe('the two-minute rule (FR-006)', () => {
   it('puts two minutes on the clock, not some other number', async () => {
     await startTheTimer()
 
-    expect(screen.getByText('2:00')).toBeInTheDocument()
+    // Literal seconds, never the imported constant: an assertion written against the
+    // constant would follow it if someone changed 120 to 60, and prove nothing.
+    expect(readClock()).toBeGreaterThan(115)
+    expect(readClock()).toBeLessThanOrEqual(120)
   })
 
   it('counts down in real time', async () => {
     await startTheTimer()
+    const before = readClock()
 
     await act(async () => {
       vi.advanceTimersByTime(61_000)
     })
 
-    // 61 seconds in, not 2:00 and not 0:00 — a clock that renders the constant and never
-    // moves would pass an assertion on the starting value alone.
-    expect(screen.getByText('0:59')).toBeInTheDocument()
+    // Exactly 61 seconds of clock for 61 seconds of time — a clock that renders the constant
+    // and never moves would pass an assertion on the starting value alone.
+    expect(readClock()).toBe(before - 61)
   })
 
   it('stops at zero and says so, instead of running negative', async () => {
@@ -325,7 +353,8 @@ describe('the two-minute rule (FR-006)', () => {
       vi.advanceTimersByTime(200_000)
     })
 
-    expect(screen.getByText('0:00')).toBeInTheDocument()
+    // Clamped, so this one needs no tolerance: past the end there is nothing to drift.
+    expect(readClock()).toBe(0)
     expect(screen.getByRole('status')).toHaveTextContent(/time is up/i)
   })
 
@@ -362,14 +391,18 @@ describe('the two-minute rule (FR-006)', () => {
     const sent = captureClarifyRequest('next_actions')
     const { user, clarified } = await startTheTimer()
 
+    const before = readClock()
     await act(async () => {
       vi.advanceTimersByTime(90_000)
     })
-    expect(screen.getByText('0:30')).toBeInTheDocument()
+    const runDown = readClock()
+    expect(runDown).toBe(before - 90)
 
     await user.click(screen.getByRole('button', { name: /need more time/i }))
-    // A loop restarts the clock. Continuing from 0:30 would be "more time" in name only.
-    expect(screen.getByText('2:00')).toBeInTheDocument()
+    // A loop restarts the clock. Continuing from where it was would be "more time" in name
+    // only, so what matters is that the clock jumped back UP to a fresh two minutes.
+    expect(readClock()).toBeGreaterThan(runDown)
+    expect(readClock()).toBeGreaterThan(115)
 
     await user.click(screen.getByRole('button', { name: /need more time/i }))
     await user.click(screen.getByRole('button', { name: 'Done' }))
@@ -451,5 +484,63 @@ describe('the two-minute rule (FR-006)', () => {
       twoMinutes: false,
       delegable: false,
     })
+  })
+})
+
+describe('an error message outlives only its own attempt', () => {
+  it('is cleared when the user moves to another question', async () => {
+    const { user } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: /delegate/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/who you are waiting on/i)
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    // The message described an attempt that is over; carrying it into "can someone else do
+    // it?" reads as a complaint about that question instead.
+    expect(screen.getByRole('alert')).toBeEmptyDOMElement()
+  })
+})
+
+describe('backing out of the quick-route', () => {
+  it('does not let an abandoned destination hijack a later tree submit', async () => {
+    // Found in implementation review. The quick-route target survived a walk back through
+    // "is it actionable?", so a user who changed their mind and then answered the questions
+    // properly had their answers replaced by {quickRouteBucket, delegatedTo}. The item
+    // still landed in Delegation with the right note — nothing looked wrong — while the
+    // deferral, the loop count and the FR-006 log line were all silently dropped.
+    const sent = captureClarifyRequest('delegation')
+    const { user, clarified } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: /skip the questions/i }))
+    await user.click(screen.getByRole('button', { name: 'Delegation' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    // Now the real tree, all the way through a deferred timer.
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: /do it now/i }))
+    await user.click(screen.getByRole('button', { name: /file it instead/i }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.type(screen.getByLabelText(/who are you waiting on/i), 'Ania')
+    await user.click(screen.getByRole('button', { name: /delegate/i }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: true,
+      twoMinuteOutcome: 'deferred',
+      twoMinuteLoops: 0,
+      delegable: true,
+      delegatedTo: 'Ania',
+    })
+    // The answers the user actually gave — not a quick-route they abandoned.
+    expect(sent[0]).not.toHaveProperty('quickRouteBucket')
   })
 })

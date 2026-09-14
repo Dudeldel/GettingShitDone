@@ -55,6 +55,13 @@ class ItemRepository implements ItemRepositoryInterface
                     // FR-006: written in the SAME statement as the bucket, so an item can
                     // never be filed-but-not-marked-done (or the reverse) — the two facts
                     // about a two-minute completion land together or not at all.
+                    //
+                    // The null branch is safe ONLY because of the `bucket = inbox` predicate
+                    // above: a completed item has left the Inbox, so it can never be clarified
+                    // again and this can never overwrite a real completion. Whoever implements
+                    // FR-010 (re-file an already-bucketed item) and relaxes that predicate must
+                    // stop writing null here, or re-filing a finished Next Action to Calendar
+                    // will silently erase the fact that it was done.
                     'completed_at' => $outcome->completed ? now() : null,
                     // Query-builder updates bypass Eloquent, so timestamps are ours to set.
                     'updated_at' => now(),

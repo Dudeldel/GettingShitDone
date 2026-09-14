@@ -299,6 +299,6 @@ describe('a completed item in Next Actions (FR-006)', () => {
     // The decision this slice recorded, asserted end to end: done is state, not a ninth
     // bucket. The item stays where it was filed and says it is finished.
     expect(await screen.findByText('reply to the landlord')).toBeInTheDocument()
-    expect(screen.getByText(/done/i)).toBeInTheDocument()
+    expect(screen.getByText('✓ Done')).toBeInTheDocument()
   })
 })

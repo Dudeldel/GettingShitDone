@@ -74,7 +74,16 @@ class ClarifyItemRequest extends FormRequest
              * FR-006: the two-minute rule. Asked once the item is a single step, and BEFORE
              * "can it be delegated?" — the canonical GTD order (FR-003).
              */
-            'twoMinutes' => ['required_if_accepted:singleStep', 'boolean'],
+            'twoMinutes' => [
+                'required_if_accepted:singleStep',
+                // ...and refused on the paths that never ask it. Without these, timer
+                // answers can ride a non-actionable or multi-step payload: the decision tree
+                // ignores them there, so they used to be silently accepted rather than
+                // rejected, which is how a Projects item came to log a completed timer.
+                'prohibited_if_declined:actionable',
+                'prohibited_if_declined:singleStep',
+                'boolean',
+            ],
             /**
              * How the timer ended. Required once a timer ran, and meaningless without one —
              * an outcome for a timer that never started would be a recorded fact about
@@ -83,6 +92,8 @@ class ClarifyItemRequest extends FormRequest
             'twoMinuteOutcome' => [
                 'required_if_accepted:twoMinutes',
                 'prohibited_if_declined:twoMinutes',
+                'prohibited_if_declined:actionable',
+                'prohibited_if_declined:singleStep',
                 Rule::enum(TwoMinuteOutcome::class),
             ],
             /**
@@ -92,6 +103,8 @@ class ClarifyItemRequest extends FormRequest
              */
             'twoMinuteLoops' => [
                 'prohibited_if_declined:twoMinutes',
+                'prohibited_if_declined:actionable',
+                'prohibited_if_declined:singleStep',
                 'nullable',
                 'integer',
                 'min:0',
@@ -121,6 +134,10 @@ class ClarifyItemRequest extends FormRequest
                 // domain rejects the payload instead, which is the edge/domain disagreement
                 // InvalidClarificationException says should never happen.
                 'required_if:quickRouteBucket,'.GtdBucket::Delegation->value,
+                // The other half of the contradiction `delegable` already refuses: naming
+                // who you are waiting on for something you have just finished. Prohibiting
+                // only the boolean left the invariant half-enforced.
+                'prohibited_if:twoMinuteOutcome,'.TwoMinuteOutcome::Done->value,
                 'nullable',
                 'string',
                 'max:'.ItemConst::DELEGATED_TO_MAX_LENGTH,
