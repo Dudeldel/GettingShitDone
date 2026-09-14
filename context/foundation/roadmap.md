@@ -37,7 +37,7 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-03 | two-minute-rule-timer      | run the 2-minute timer for a "< 2 min" item during clarify       | S-02          | FR-006, US-01                     | done |
 | S-04 | promote-to-project         | promote a multi-step actionable item to the Projects bucket      | S-02          | FR-005, US-01                     | absorbed by S-02 |
 | S-05 | eight-bucket-views         | open and view all 8 GTD buckets, and empty the Trash             | S-01          | FR-009 (+ Trash purge, no FR)     | done |
-| S-06 | item-metadata-and-calendar | assign a date, tags, contexts and flags to an item; dated items show in Calendar | S-01, S-05    | FR-011, FR-013                    | in-progress |
+| S-06 | item-metadata-and-calendar | assign a date, tags, contexts and flags to an item; dated items show in Calendar | S-01, S-05    | FR-011, FR-013                    | done |
 | S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | absorbed by S-06 |
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-06    | FR-014                            | parked |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | parked |
@@ -240,7 +240,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   slice adds is exactly where that discipline is most at risk.
 - **Risk:** important/urgent are the inputs S-08 reads, so their encoding must be modelled
   deliberately here rather than improvised.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-07: Tags, contexts, priorities, and flags
 
@@ -444,3 +444,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: during clarify, a "< 2 min" item triggers a 2-minute timer; "done" marks it complete, "need more time" loops the timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-two-minute-rule-timer/`. Lesson: —.
 - **S-10: user sees an interface that reads as a considered product — a real visual hierarchy, an accent that means something, a visible focus treatment, and no layout defects — instead of the unstyled scaffold the feature slices have been building on.** — Archived 2026-09-14 → `context/archive/2026-09-14-visual-design-pass/`. Lesson: —.
 - **S-11: user can act on an item that has already left the Inbox — move it into a different bucket (Someday/Maybe into Next Actions when it becomes real, a mis-filed item into where it belongs), and mark it done without having done it inside a two-minute timer.** — Archived 2026-09-14 → `context/archive/2026-09-14-item-actions-after-clarify/`. Lesson: —.
+- **S-06: user can give an item a date, tags, a context and the important/urgent flags, and an item that has a date shows up in the Calendar/Dates bucket.** — Archived 2026-09-14 → `context/archive/2026-09-14-item-metadata-and-calendar/`. Lesson: —.
