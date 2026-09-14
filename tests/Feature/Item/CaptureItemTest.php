@@ -5,6 +5,7 @@ use App\Domain\Item\GtdBucket;
 use App\Exceptions\ItemPersistenceException;
 use App\Models\Item;
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
@@ -20,6 +21,35 @@ it('captures an idea into the Inbox', function () {
         ->assertJsonPath('note', null);
 
     expect(Item::query()->count())->toBe(1);
+});
+
+/**
+ * The durability oracle for the PRD guardrail "capture never loses an entry".
+ *
+ * A 201 only attests that Eloquent's insert call returned: ItemRepository::create maps the
+ * same in-memory model it just built, with no re-read, so the 201 body's timestamps are the
+ * app's clock and its dormant fields are null whatever the schema says. Reading the item back
+ * through a SECOND request is what proves it is really there — a fresh FormRequest, a freshly
+ * resolved service and repository (both bound, not singletons), and the real listByBucket
+ * query rather than the object the POST serialized.
+ *
+ * A literal "fresh session" is out of reach here: the Feature suite runs SQLite :memory: under
+ * RefreshDatabase, so the write is rolled back and the database dies with the connection. This
+ * asserts readability through the real read path, which is the strongest available oracle.
+ */
+it('reads a captured item back through a separate list request', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    $id = $this->postJson('/api/items', ['title' => 'ring the dentist'])
+        ->assertStatus(Response::HTTP_CREATED)
+        ->json('id');
+
+    $this->getJson('/api/items')
+        ->assertStatus(Response::HTTP_OK)
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.id', $id)
+        ->assertJsonPath('0.title', 'ring the dentist')
+        ->assertJsonPath('0.bucket', 'inbox');
 });
 
 it('persists the optional note', function () {
@@ -123,6 +153,12 @@ it('reports a write failure as 500 without echoing the payload', function () {
 
     $response->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR);
     expect($response->getContent())->not->toContain('4711');
+
+    // The literal is pinned here on purpose. bootstrap/app.php is its only declaration —
+    // there is no constant to derive from — and the SPA reads exactly this field
+    // (api.ts parses `message` out of any non-2xx body and renders it to the user).
+    // Changing the message without changing this test would silently reword the UI.
+    $response->assertJsonPath('message', 'The item could not be saved. Please try again.');
 });
 
 it('keeps the captured text out of the failure path entirely', function () {
@@ -137,6 +173,42 @@ it('keeps the captured text out of the failure path entirely', function () {
         expect($e->getMessage())->not->toContain('4711')
             ->and($e->getPrevious())->toBeNull();
     }
+});
+
+/**
+ * The other half of the guardrail: a write that fails must leave nothing behind, and the user
+ * must not be told otherwise.
+ *
+ * The failure is forced with a unique index rather than by dropping the table, because the
+ * assertion needs the read path to still work afterwards — a dropped table would make the
+ * follow-up GET fail too and prove nothing. The duplicate insert raises a real QueryException
+ * inside the real ItemRepository, so the whole chain (QueryException -> ItemPersistenceException
+ * -> the fixed-message 500) is exercised, not simulated.
+ *
+ * Today capture is one statement, so a partial write is impossible and this is close to
+ * tautological. It earns its place as the guard for when capture stops being one statement:
+ * there is no transaction anywhere in the item path, so a second write added later would have
+ * nothing holding it to the first.
+ */
+it('leaves nothing readable when the write fails', function () {
+    Sanctum::actingAs(User::factory()->create());
+    Schema::table('items', function (Blueprint $table) {
+        $table->unique('title');
+    });
+
+    $this->postJson('/api/items', ['title' => 'the only survivor'])
+        ->assertStatus(Response::HTTP_CREATED);
+
+    $this->postJson('/api/items', ['title' => 'the only survivor'])
+        ->assertStatus(Response::HTTP_INTERNAL_SERVER_ERROR)
+        // The failure body carries the fixed message and no item — nothing a client could
+        // mistake for a confirmation.
+        ->assertJsonPath('message', 'The item could not be saved. Please try again.');
+
+    // The read path still works, and the failed capture is simply not in it.
+    $this->getJson('/api/items')
+        ->assertStatus(Response::HTTP_OK)
+        ->assertJsonCount(1);
 });
 
 it('rejects a note longer than the limit', function () {
