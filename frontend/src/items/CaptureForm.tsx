@@ -84,8 +84,8 @@ export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ margin: '1.5rem 0' }} aria-busy={submitting}>
-      <label htmlFor="capture-title" style={{ display: 'block' }}>
+    <form onSubmit={handleSubmit} className="my-6" aria-busy={submitting}>
+      <label htmlFor="capture-title" className="block text-sm font-medium text-ink">
         Catch an idea
       </label>
       <input
@@ -100,19 +100,23 @@ export function CaptureForm({ onCaptured }: { onCaptured: (item: Item) => void }
         aria-invalid={error !== null}
         aria-describedby="capture-error capture-status"
         placeholder="What just crossed your mind?"
-        style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+        className="field mt-1.5"
       />
-      {/* Both live regions are always mounted: adding aria-live at the same moment as the
-          text is unreliable across screen readers. */}
-      <button type="submit" disabled={submitting} style={{ marginTop: '0.5rem' }}>
+      <button type="submit" disabled={submitting} className="btn btn-primary mt-2">
         {submitting ? 'Saving…' : 'Capture'}
       </button>
-      <p id="capture-error" role="alert" style={{ color: 'var(--error)' }}>
-        {error ?? ''}
-      </p>
-      <p id="capture-status" role="status" style={{ color: 'var(--success)' }}>
-        {error === null && saved ? 'Saved to your Inbox.' : ''}
-      </p>
+      {/* Both live regions are always mounted: adding aria-live at the same moment as the
+          text is unreliable across screen readers. The reserved line is on the WRAPPER, so
+          each region still renders zero child nodes when empty — three tests assert exactly
+          that — while the page below no longer jumps when a message arrives. */}
+      <div className="live-line mt-2">
+        <p id="capture-error" role="alert" className="text-danger">
+          {error ?? ''}
+        </p>
+        <p id="capture-status" role="status" className="text-ok">
+          {error === null && saved ? 'Saved to your Inbox.' : ''}
+        </p>
+      </div>
     </form>
   )
 }

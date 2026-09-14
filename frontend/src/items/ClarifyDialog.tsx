@@ -102,12 +102,17 @@ export function ClarifyDialog({
     return () => clearInterval(id)
   }, [step, loops, expired])
 
-  // A message describes the attempt that produced it. Moving to another question ends that
-  // attempt, so "Say who you are waiting on." must not follow the user into a different one
-  // — nor may the input it marked stay flagged as invalid.
-  useEffect(() => {
+  /**
+   * A message describes the attempt that produced it. Moving to another question ends that
+   * attempt, so the error and the `aria-invalid` it drives must not follow the user into a
+   * different one. Done here rather than in an effect: calling setState from inside an
+   * effect is what react-hooks/set-state-in-effect forbids, and the handler is where the
+   * intent actually lives.
+   */
+  function goToStep(next: Step): void {
     setError(null)
-  }, [step])
+    setStep(next)
+  }
 
   async function send(answers: ClarifyAnswers): Promise<void> {
     setError(null)
@@ -171,40 +176,45 @@ export function ClarifyDialog({
   return (
     <section
       role="dialog"
-      aria-modal="true"
+      // aria-modal is deliberately absent. It was here while this rendered as a plain inline
+      // section with no overlay, no backdrop and no focus trap — everything behind it stayed
+      // on screen and in the tab order, so the attribute told a screen reader something that
+      // was not true. The wizard now reads as an elevated panel; making it genuinely modal is
+      // a behaviour change, and lying about it was the worse of the two options.
       aria-labelledby="clarify-heading"
       onKeyDown={(e) => {
         if (e.key === 'Escape' && !submitting) {
           onCancel()
         }
       }}
-      style={{ marginTop: '1rem' }}
+      className="panel mt-4 p-4"
     >
-      <h3 id="clarify-heading" ref={headingRef} tabIndex={-1} style={{ color: 'var(--text-h)' }}>
+      <h3 id="clarify-heading" ref={headingRef} tabIndex={-1}>
         Clarify: {item.title}
       </h3>
 
       {step === 'actionable' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Is it actionable?</legend>
-          <button type="button" disabled={submitting} onClick={() => setStep('singleStep')}>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Is it actionable?</legend>
+          <button className="btn btn-quiet mt-2 mr-2" type="button" disabled={submitting} onClick={() => goToStep('singleStep')}>
             Yes
           </button>
-          <button type="button" disabled={submitting} onClick={() => setStep('nonActionable')}>
+          <button className="btn btn-quiet mt-2 mr-2" type="button" disabled={submitting} onClick={() => goToStep('nonActionable')}>
             No
           </button>
-          <button type="button" disabled={submitting} onClick={() => setStep('quickRoute')}>
+          <button className="btn btn-quiet mt-2 mr-2" type="button" disabled={submitting} onClick={() => goToStep('quickRoute')}>
             Skip the questions
           </button>
         </fieldset>
       )}
 
       {step === 'quickRoute' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>File it directly</legend>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">File it directly</legend>
           {QUICK_ROUTES.map(({ value, label }) => (
             <button
               key={value}
+              className="btn btn-quiet mt-2 mr-2"
               type="button"
               disabled={submitting}
               onClick={() => {
@@ -212,7 +222,7 @@ export function ClarifyDialog({
                   // Delegation still needs its who/what note (FR-007) — the quick-route
                   // skips the questions, not the field that gives the bucket meaning.
                   setQuickRouteTarget(value)
-                  setStep('delegatedTo')
+                  goToStep('delegatedTo')
 
                   return
                 }
@@ -226,11 +236,12 @@ export function ClarifyDialog({
       )}
 
       {step === 'nonActionable' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Where should it go?</legend>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Where should it go?</legend>
           {NON_ACTIONABLE.map(({ value, label }) => (
             <button
               key={value}
+              className="btn btn-quiet mt-2 mr-2"
               type="button"
               disabled={submitting}
               onClick={() => void send({ actionable: false, nonActionableDestination: value })}
@@ -242,12 +253,13 @@ export function ClarifyDialog({
       )}
 
       {step === 'singleStep' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Is it a single step?</legend>
-          <button type="button" disabled={submitting} onClick={() => setStep('twoMinutes')}>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Is it a single step?</legend>
+          <button className="btn btn-quiet mt-2 mr-2" type="button" disabled={submitting} onClick={() => goToStep('twoMinutes')}>
             Yes
           </button>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => void send({ actionable: true, singleStep: false })}
@@ -258,25 +270,27 @@ export function ClarifyDialog({
       )}
 
       {step === 'twoMinutes' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Will it take less than two minutes?</legend>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Will it take less than two minutes?</legend>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => {
               restartTwoMinuteRule()
-              setStep('timer')
+              goToStep('timer')
             }}
           >
             Yes — do it now
           </button>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => {
               // Not "no" plus a stale timer: this path must report that no timer ran.
               restartTwoMinuteRule()
-              setStep('delegable')
+              goToStep('delegable')
             }}
           >
             No
@@ -285,20 +299,24 @@ export function ClarifyDialog({
       )}
 
       {step === 'timer' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Do it now — the clock is running</legend>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Do it now — the clock is running</legend>
           {/* Not a live region: a countdown announced every second would drown out
               everything else on the screen. The status line below announces the one
               transition that matters. */}
-          <p style={{ fontSize: '2rem', color: 'var(--text-h)', margin: '0.25rem 0' }}>
+          {/* leading-[1.2] rather than text-4xl's default 40px: the glyph box of 36px digits is
+              43px tall, so the default line box let it bleed a pixel. Small, but it is the
+              exact defect class this slice exists to remove. */}
+          <p className="my-1 text-4xl leading-[1.2] font-semibold tabular-nums text-ink">
             {formatClock(secondsLeft)}
           </p>
-          <p role="status" style={{ color: 'var(--muted)' }}>
+          <p role="status" className="text-sm text-muted">
             {expired
               ? 'Time is up. Finish it, take another two minutes, or file it instead.'
               : 'Two minutes on the clock.'}
           </p>
           <button
+            className="btn btn-primary mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() =>
@@ -314,6 +332,7 @@ export function ClarifyDialog({
             {submitting ? 'Filing…' : 'Done'}
           </button>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => {
@@ -326,13 +345,14 @@ export function ClarifyDialog({
             I need more time
           </button>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => {
               // Deferring is not a destination — the item is still unclarified, so it goes
               // back into the tree at the question it had not reached yet.
               setDeferred(true)
-              setStep('delegable')
+              goToStep('delegable')
             }}
           >
             File it instead
@@ -341,12 +361,13 @@ export function ClarifyDialog({
       )}
 
       {step === 'delegable' && (
-        <fieldset style={{ border: 0, padding: 0 }}>
-          <legend>Can someone else do it?</legend>
-          <button type="button" disabled={submitting} onClick={() => setStep('delegatedTo')}>
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium text-ink">Can someone else do it?</legend>
+          <button className="btn btn-quiet mt-2 mr-2" type="button" disabled={submitting} onClick={() => goToStep('delegatedTo')}>
             Yes
           </button>
           <button
+            className="btn btn-quiet mt-2 mr-2"
             type="button"
             disabled={submitting}
             onClick={() => void send(withTwoMinuteAnswers({ delegable: false }))}
@@ -358,7 +379,7 @@ export function ClarifyDialog({
 
       {step === 'delegatedTo' && (
         <form onSubmit={handleDelegation}>
-          <label htmlFor="clarify-delegated-to" style={{ display: 'block' }}>
+          <label htmlFor="clarify-delegated-to" className="block text-sm font-medium text-ink">
             Who are you waiting on?
           </label>
           <input
@@ -370,9 +391,9 @@ export function ClarifyDialog({
             aria-invalid={error !== null}
             aria-describedby="clarify-error"
             placeholder="Ania — sent the contract on Tuesday"
-            style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+            className="field mt-1.5"
           />
-          <button type="submit" disabled={submitting} style={{ marginTop: '0.5rem' }}>
+          <button className="btn btn-primary mt-2" type="submit" disabled={submitting}>
             {submitting ? 'Filing…' : 'Delegate'}
           </button>
         </form>
@@ -380,15 +401,18 @@ export function ClarifyDialog({
 
       {/* Always mounted, like the capture form's regions: adding aria-live at the same
           moment as the text is unreliable across screen readers. */}
-      <p id="clarify-error" role="alert" style={{ color: 'var(--error)' }}>
-        {error ?? ''}
-      </p>
+      <div className="live-line mt-3">
+        <p id="clarify-error" role="alert" className="text-danger">
+          {error ?? ''}
+        </p>
+      </div>
 
-      <button type="button" onClick={onCancel} disabled={submitting}>
+      <button className="btn btn-ghost mt-2 mr-2" type="button" onClick={onCancel} disabled={submitting}>
         Cancel
       </button>
       {step !== 'actionable' && (
         <button
+          className="btn btn-quiet mt-2 mr-2"
           type="button"
           disabled={submitting}
           onClick={() => {
@@ -414,7 +438,7 @@ export function ClarifyDialog({
             if (previous === 'actionable') {
               setQuickRouteTarget(null)
             }
-            setStep(previous)
+            goToStep(previous)
           }}
         >
           Back

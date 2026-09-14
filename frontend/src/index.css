@@ -1,109 +1,274 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --muted: #6b6375;
-  --error: #b3261e;
-  --success: #1b6b3a;
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* Light only, permanently (S-10 decision). This keeps any stray `dark:` utility inert,
+   because no `.dark` class is ever applied — cheap insurance against one being copied in
+   from a snippet later and firing on someone's OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/**
+ * The design tokens. Tailwind v4 is CSS-first: everything declared here becomes both a real
+ * CSS variable and a utility (`bg-surface`, `text-muted`, `shadow-card`, `ring-accent`).
+ *
+ * Register: calm and restrained. One accent, used only for the primary action, the open
+ * bucket, and the focus ring — never decoratively.
+ */
+@theme {
+  --color-ground: #f6f6f7;
+  --color-surface: #ffffff;
+  --color-line: #d5d5dc;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Three genuinely distinct levels. The scaffold had two: `--muted` was byte-identical to
+     `--text`, so every timestamp and empty state rendered exactly like body copy. */
+  --color-ink: #16161a;
+  --color-body: #4a4a55;
+  --color-muted: #767682;
+
+  --color-accent: #4f46b8;
+  --color-accent-soft: #eeecfa;
+
+  /* Both carried over unchanged from the scaffold — they are the two colours whose contrast
+     was already verified at 6.54:1. */
+  --color-danger: #b3261e;
+  --color-ok: #1b6b3a;
+
+  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --shadow-card:
+    0 1px 2px rgb(16 16 24 / 0.05), 0 1px 3px rgb(16 16 24 / 0.06);
+  --shadow-panel:
+    0 4px 6px -2px rgb(16 16 24 / 0.06), 0 12px 20px -8px rgb(16 16 24 / 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --muted: #9ca3af;
-    --error: #ff8a80;
-    --success: #7ee2a8;
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+html {
+  color-scheme: light;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  /* UNITLESS, and that is the whole point. The scaffold's `font: 18px/145%` computed the
+     inherited line-height to an absolute 26.1px, which every descendant then used no matter
+     how large its own text was — so the 56px h1 overlapped itself at the default desktop
+     width and the 36px two-minute clock sat in a 26px box. A ratio makes each element
+     compute its own. */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+body {
+  background: var(--color-ground);
+  color: var(--color-body);
 }
 
 #root {
   min-height: 100svh;
 }
 
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
+/* Headings are declared here rather than per screen so every route is correct from this
+   phase on — including the ones restyled in later phases. Preflight resets heading sizes to
+   inherit, so without this they would be body-sized in between. */
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--color-ink);
 }
+
 h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+h3 {
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* One global focus treatment, so nothing is ever left with the browser default clashing
+   against the rest — including the wizard's `tabIndex={-1}` heading, which is focused
+   programmatically and would otherwise show nothing at all. `:focus-visible` rather than
+   `:focus` keeps the ring off mouse clicks. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/**
+ * A floor for controls that have not been converted yet.
+ *
+ * Preflight strips the native appearance from every button and input — which is what fixes
+ * the 13.33px Arial defect, but it also means an unconverted control renders with no border
+ * and no background, i.e. invisible. With one route converted per phase, the Login and bucket
+ * screens would be unusable in the meantime. That is a consequence of vertical phasing, not
+ * an acceptable intermediate state.
+ *
+ * This sits in `base`, so anything in `components` (.btn, .field) overrides it without a
+ * fight. It is deleted in Phase 3, once the last bare control is gone.
+ */
+@layer base {
+  button {
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-body);
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  input {
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: 0.4rem 0.7rem;
+  }
+
+  input::placeholder {
+    color: var(--color-muted);
   }
 }
-p {
-  margin: 0;
+
+/**
+ * Legacy token aliases.
+ *
+ * The screens restyled in Phases 2 and 3 still read these names inline. Aliasing rather than
+ * deleting means the fixes land everywhere in Phase 1 — in particular `--muted` stops being
+ * a duplicate of `--text`, so de-emphasised text is actually de-emphasised on every screen
+ * immediately, not only on the ones already converted.
+ *
+ * Deleted in Phase 3, once the last inline reference is gone.
+ */
+:root {
+  --text: var(--color-body);
+  --text-h: var(--color-ink);
+  --muted: var(--color-muted);
+  --border: var(--color-line);
+  --error: var(--color-danger);
+  --success: var(--color-ok);
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+/**
+ * A small component layer, written as plain CSS against the tokens above.
+ *
+ * These exist so the JSX stays readable and so the same control looks the same on every
+ * screen — the scaffold had the page shell duplicated three times and the fieldset reset
+ * seven times, which is exactly how a UI drifts.
+ */
+@layer components {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    box-shadow: var(--shadow-card);
+  }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-panel);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #443ba3;
+  }
+
+  .btn-quiet {
+    background: var(--color-surface);
+    border-color: var(--color-line);
+    color: var(--color-body);
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--color-ground);
+    color: var(--color-ink);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-muted);
+    padding-inline: 0.5rem;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--color-ink);
+  }
+
+  /* The destructive choice looks destructive. It deliberately does NOT take focus — the safe
+     button does (S-05 F8), so the loud one is the one you have to reach for. */
+  .btn-danger {
+    background: var(--color-danger);
+    color: #fff;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: #97201a;
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    color: var(--color-ink);
+  }
+
+  .field::placeholder {
+    color: var(--color-muted);
+  }
+
+  /* The error styling hangs off the attribute itself, which is why this slice opened by
+     giving `aria-invalid` a test: losing it is now a visible regression too. */
+  .field[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
+
+  /* Live regions are mounted before they have text, deliberately (ph3 F6a). Reserving the
+     line stops every message from shoving the rest of the page down by one line. */
+  .live-line {
+    min-height: 1.25rem;
+    font-size: 0.875rem;
+  }
 }

@@ -41,7 +41,9 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-07 | item-metadata              | assign tags, contexts, priorities, and flags to an item         | S-01          | FR-013                            | proposed |
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
-| S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | proposed |
+| S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | in-progress |
+| S-11 | refile-between-buckets     | move an already-bucketed item into a different bucket             | S-02, S-05    | FR-010 (v2, promoted)             | proposed |
+| S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap, see S-12          | proposed |
 
 ## Streams
 
@@ -205,7 +207,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:**
   - Purge granularity: "empty the whole Trash" in one action vs. discarding one item at a time from the Trash view (or both). Owner: user. Block: no — decide in `/10x-plan`.
-- **Risk:** Generalizes the Inbox list from S-01 into navigation across all 8 buckets, and adds the slice's one destructive write. The views themselves stay low risk; the purge does not — it is the only irreversible operation in the product, so it must be reachable ONLY from the Trash view and never as a generic "delete item" verb hanging off every bucket. That boundary is what keeps it inside FR-004's semantics instead of quietly shipping FR-010's re-filing, which is parked. The full 8-bucket set IS the "GTD out-of-the-box" promise, so none can be dropped for UI economy.
+- **Risk:** Generalizes the Inbox list from S-01 into navigation across all 8 buckets, and adds the slice's one destructive write. The views themselves stay low risk; the purge does not — it is the only irreversible operation in the product, so it must be reachable ONLY from the Trash view and never as a generic "delete item" verb hanging off every bucket. That boundary is what keeps it inside FR-004's semantics instead of quietly shipping FR-010's re-filing, which is S-11's job and must arrive with its own verb. The full 8-bucket set IS the "GTD out-of-the-box" promise, so none can be dropped for UI economy.
 - **Note (added 2026-09-14):** the Trash purge was folded in here on purpose rather than getting its own slice. In GTD the Trash IS the delete (FR-004), so routing an item there is a clarify outcome, not a removal — as of S-02 nothing in the product ever removes a row. The Trash view is the only place a permanent discard belongs, so it rides along with the view that introduces it. Secondary, and not the reason it was added: it also closes the missing Delete operation in the 10xBuilder CRUD check.
 - **Status:** done
 
@@ -257,42 +259,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Value is in the guided step-by-step ritual over the bucket views, not in reminders (push is a Non-Goal). The risk is scope creep into notifications; the slice must stay a structured walk across existing bucket views.
 - **Status:** proposed
 
-## Backlog Handoff
-
-| Roadmap ID | Change ID                 | Suggested issue title                                  | Ready for `/10x-plan` | Notes                                  |
-| ---------- | ------------------------- | ----------------------------------------------------- | --------------------- | -------------------------------------- |
-| F-01       | quality-gates-toolchain   | Wire Pest + Larastan L6 + Scramble into CI gates      | yes                   | Run `/10x-plan quality-gates-toolchain` |
-| F-02       | email-password-auth       | Email + password auth (Sanctum) for the single user  | no                    | Needs F-01                             |
-| F-03       | observability-baseline    | Request-id + structured logging + LogEvent baseline   | no                    | Needs F-01                             |
-| S-01       | capture-to-inbox          | Capture an idea into the Inbox (north star)           | no                    | Needs F-02                             |
-| S-02       | guided-clarify-routing    | Guided clarify routes an item to its bucket          | no                    | Needs S-01, F-03                       |
-| S-03       | two-minute-rule-timer     | 2-minute rule timer in clarify                        | no                    | Needs S-02                             |
-| S-04       | promote-to-project        | Promote a multi-step item to a Project               | no                    | Needs S-02                             |
-| S-05       | eight-bucket-views        | View all 8 GTD buckets; empty the Trash               | no                    | Needs S-01                             |
-| S-06       | dates-and-calendar-bucket | Assign dates; Calendar/Dates bucket                   | no                    | Needs S-01, S-05                       |
-| S-07       | item-metadata             | Tags, contexts, priorities, and flags                 | no                    | Needs S-01                             |
-| S-08       | eisenhower-quadrants      | Eisenhower quadrants for Next Actions                 | no                    | Needs S-02, S-07                       |
-| S-09       | weekly-review             | Guided weekly review                                   | no                    | Needs S-05                             |
-
-## Open Roadmap Questions
-
-1. **Data privacy for cloud-stored items** — Owner: user. Block: roadmap-wide (none currently). Deliberately not committed as an MVP NFR (PRD Open Questions); revisit before any non-personal use.
-2. **List-view responsiveness target** — Owner: user. Block: none. Not committed for MVP (PRD Open Questions); revisit if task volume grows. Touches S-05/S-08.
-3. **SPA auth model across two Railway origins** — Owner: user. Block: F-02 (resolve before building auth). Sanctum cookie vs. token + CORS tightening from the current `*` (per `infrastructure.md`).
-
-## Parked
-
-- **Manual re-filing between buckets (FR-010)** — Why parked: PRD demotes to nice-to-have / v2; in-clarify quick-pick (FR-002) covers the MVP need.
-- **Project → next-actions linking (FR-012)** — Why parked: PRD defers to v2; in the MVP a Project is just a destination bucket.
-- **AI-assisted clarify** — Why parked: PRD Non-Goal; the heart is GTD out-of-the-box, not AI. v2 fast-follow.
-- **Voice capture + transcription** — Why parked: PRD Non-Goal; text capture only in MVP.
-- **Mobile app** — Why parked: PRD Non-Goal; web only in MVP.
-- **Recurring items / recurring detection** — Why parked: PRD Non-Goal in MVP.
-- **Push reminders for the weekly review** — Why parked: PRD Non-Goal; review runs without notifications.
-- **External integrations (calendar / email / third-party)** — Why parked: PRD Non-Goal in MVP.
-- **OAuth + passwordless magic link; ESP32 hardware "catch" channel** — Why parked: PRD Access Control / shape-notes forward block; beyond the email+password MVP.
-- **Multi-user / sharing** — Why parked: PERMANENT non-goal (PRD). Never roadmapped.
-
 ### S-10: A visual design the product deserves
 
 - **Outcome:** user sees an interface that reads as a considered product — a real visual
@@ -330,6 +296,98 @@ Foundations below assume these are present and do NOT re-scaffold them.
   pass with no visual regression gate can silently break working screens, and the h1 bug is
   the proof that it already has. Scope control matters as much: this must not become a
   rewrite of the components' behaviour.
+- **Status:** in-progress
+
+### S-11: Re-file an item into another bucket
+
+- **Outcome:** user can move an already-bucketed item into a different bucket — Someday/Maybe
+  into Next Actions when it becomes real, a mis-filed item into where it belongs.
+- **Change ID:** refile-between-buckets
+- **PRD refs:** FR-010 (nice-to-have, deferred to v2). Promoted out of Parked because daily
+  use of the shipped app made it the first thing missing: once an item leaves the Inbox there
+  is currently NO way to move it, ever.
+- **Prerequisites:** S-02, S-05
+- **Parallel with:** S-12
+- **Blockers:** —
+- **Unknowns:**
+  - The backend does not merely lack this — it actively forbids it. `ItemRepository::clarify`
+    guards on `where bucket = inbox` in the same statement that writes, and a second clarify
+    answers 409 "That item has already been clarified." So this needs its own verb; loosening
+    the clarify guard is the wrong move and would reopen the check-then-act race that guard
+    was written to close. Owner: user. Block: no.
+  - Whether re-filing re-runs the decision tree or is a direct destination pick. FR-002's
+    quick-route already exists as a UI precedent. Owner: user. Block: **yes** — it decides
+    whether this is a new endpoint or a new mode of an existing one.
+- **Risk:** FR-008's exactly-one-bucket invariant is the thing to protect, and the single
+  statement that enforces it is the same one that blocks this. The second trap is recorded in
+  S-03's implementation review (F9): `clarify` writes `completed_at => null` unconditionally,
+  which is safe ONLY because the inbox guard means a completed item can never be re-clarified.
+  A re-filing path that reuses that write erases completions silently. Third: S-05 deliberately
+  gave the Trash purge no item id so a generic "delete this row" verb could not arrive by the
+  back door — re-filing must not become that verb either.
+- **Status:** proposed
+
+### S-12: Mark an item done outside the two-minute timer
+
+- **Outcome:** user can mark any actionable item complete, and see what they finished — the
+  ordinary act of doing a Next Action.
+- **Change ID:** complete-an-item
+- **PRD refs:** **none, and that is the finding.** This is a PRD gap rather than a deferred
+  item: FR-006 records only the two-minute timer's outcome, and FR-007's done flag belongs to
+  Delegation alone. Nothing in the spec lets a user finish a Next Action. Today `completed_at`
+  can only be set by doing the work inside 120 seconds.
+- **Prerequisites:** S-03 (which introduced `completed_at` and the "✓ Done" marker)
+- **Parallel with:** S-11
+- **Blockers:** —
+- **Unknowns:**
+  - Does a completed item stay in its bucket, as the two-minute rule already does, or leave
+    it? S-03 decided "done is a state, not a destination" for its own branch; this slice
+    either extends that decision or contradicts it. Owner: user. Block: **yes**.
+  - Does Delegation's existing `delegation_done` flag (FR-007) merge with `completed_at`, or
+    stay a separate concept? Two done-flags on one row is how a domain starts lying.
+    Owner: user. Block: no.
+  - Whether completed items stay listed forever. Today they do, deliberately — vanishing is
+    indistinguishable from being lost — but that answer was for a trickle, not a backlog.
+    Owner: user. Block: no.
+- **Risk:** Smaller than it looks: the column, the DTO field and the "✓ Done" rendering all
+  already exist and are tested, so this is a write path plus a control, not new state. The
+  trap is the same `completed_at => null` write named in S-11.
+- **Status:** proposed
+
+## Backlog Handoff
+
+| Roadmap ID | Change ID                 | Suggested issue title                                  | Ready for `/10x-plan` | Notes                                  |
+| ---------- | ------------------------- | ----------------------------------------------------- | --------------------- | -------------------------------------- |
+| F-01       | quality-gates-toolchain   | Wire Pest + Larastan L6 + Scramble into CI gates      | yes                   | Run `/10x-plan quality-gates-toolchain` |
+| F-02       | email-password-auth       | Email + password auth (Sanctum) for the single user  | no                    | Needs F-01                             |
+| F-03       | observability-baseline    | Request-id + structured logging + LogEvent baseline   | no                    | Needs F-01                             |
+| S-01       | capture-to-inbox          | Capture an idea into the Inbox (north star)           | no                    | Needs F-02                             |
+| S-02       | guided-clarify-routing    | Guided clarify routes an item to its bucket          | no                    | Needs S-01, F-03                       |
+| S-03       | two-minute-rule-timer     | 2-minute rule timer in clarify                        | no                    | Needs S-02                             |
+| S-04       | promote-to-project        | Promote a multi-step item to a Project               | no                    | Needs S-02                             |
+| S-05       | eight-bucket-views        | View all 8 GTD buckets; empty the Trash               | no                    | Needs S-01                             |
+| S-06       | dates-and-calendar-bucket | Assign dates; Calendar/Dates bucket                   | no                    | Needs S-01, S-05                       |
+| S-07       | item-metadata             | Tags, contexts, priorities, and flags                 | no                    | Needs S-01                             |
+| S-08       | eisenhower-quadrants      | Eisenhower quadrants for Next Actions                 | no                    | Needs S-02, S-07                       |
+| S-09       | weekly-review             | Guided weekly review                                   | no                    | Needs S-05                             |
+
+## Open Roadmap Questions
+
+1. **Data privacy for cloud-stored items** — Owner: user. Block: roadmap-wide (none currently). Deliberately not committed as an MVP NFR (PRD Open Questions); revisit before any non-personal use.
+2. **List-view responsiveness target** — Owner: user. Block: none. Not committed for MVP (PRD Open Questions); revisit if task volume grows. Touches S-05/S-08.
+3. **SPA auth model across two Railway origins** — Owner: user. Block: F-02 (resolve before building auth). Sanctum cookie vs. token + CORS tightening from the current `*` (per `infrastructure.md`).
+
+## Parked
+
+- **Project → next-actions linking (FR-012)** — Why parked: PRD defers to v2; in the MVP a Project is just a destination bucket.
+- **AI-assisted clarify** — Why parked: PRD Non-Goal; the heart is GTD out-of-the-box, not AI. v2 fast-follow.
+- **Voice capture + transcription** — Why parked: PRD Non-Goal; text capture only in MVP.
+- **Mobile app** — Why parked: PRD Non-Goal; web only in MVP.
+- **Recurring items / recurring detection** — Why parked: PRD Non-Goal in MVP.
+- **Push reminders for the weekly review** — Why parked: PRD Non-Goal; review runs without notifications.
+- **External integrations (calendar / email / third-party)** — Why parked: PRD Non-Goal in MVP.
+- **OAuth + passwordless magic link; ESP32 hardware "catch" channel** — Why parked: PRD Access Control / shape-notes forward block; beyond the email+password MVP.
+- **Multi-user / sharing** — Why parked: PERMANENT non-goal (PRD). Never roadmapped.
 
 ## Done
 

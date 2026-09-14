@@ -54,25 +54,15 @@ export function InboxPage() {
   }, [])
 
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        padding: '2rem',
-        maxWidth: 640,
-        margin: '0 auto',
-      }}
-    >
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-        }}
-      >
+    <main className="mx-auto max-w-2xl px-4 py-8">
+      {/* flex-wrap and a gap, which the scaffold had neither of: without them the
+          "Signed in as…" span squeezed the h1 below its natural width, wrapping it to two
+          lines that then overlapped because of the inherited absolute line-height. */}
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1>Getting Shit Done</h1>
-        <span>
+        <span className="text-sm text-muted">
           {user !== null && <>Signed in as {user.email} · </>}
-          <button type="button" onClick={() => void logout()}>
+          <button type="button" className="btn btn-ghost text-sm" onClick={() => void logout()}>
             Log out
           </button>
         </span>
@@ -97,12 +87,14 @@ export function InboxPage() {
 
       <BucketNav current="inbox" />
 
-      <h2>Inbox</h2>
+      <h2 className="mt-6 mb-2">Inbox</h2>
       {loadError !== null && (
-        <p style={{ color: 'var(--error)' }}>Could not load your Inbox: {loadError}</p>
+        <p className="text-sm text-danger">Could not load your Inbox: {loadError}</p>
       )}
       {/* A capture that already landed must stay visible even while the load is pending. */}
-      {loadError === null && loading && items.length === 0 && <p>Loading…</p>}
+      {loadError === null && loading && items.length === 0 && (
+        <p className="text-sm text-muted">Loading…</p>
+      )}
       {/* Two gates, not one. When the load failed, the list still renders anything already
           captured — otherwise "Saved to your Inbox." sits above an Inbox the user cannot
           see. But only when there IS something: rendering an empty list under an error

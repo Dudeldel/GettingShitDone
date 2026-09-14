@@ -247,8 +247,14 @@ describe('the wizard as a dialog', () => {
     renderDialog()
 
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveAttribute('aria-modal', 'true')
-    // Focus must enter the wizard, or a keyboard user is left on the trigger with no
+    // Named by its own heading, so a screen reader says which item is being clarified.
+    expect(dialog).toHaveAccessibleName(/clarify: ring the dentist/i)
+    // And deliberately NOT modal. The wizard renders inline with no overlay, no backdrop
+    // and no focus trap — everything behind it stays on screen and in the tab order — so
+    // claiming aria-modal told a screen reader something that was not true. Asserted as an
+    // absence so the claim cannot quietly come back without the behaviour behind it.
+    expect(dialog).not.toHaveAttribute('aria-modal')
+    // Focus must still enter the wizard, or a keyboard user is left on the trigger with no
     // signal that anything opened.
     await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveFocus())
   })
@@ -542,5 +548,26 @@ describe('backing out of the quick-route', () => {
     })
     // The answers the user actually gave — not a quick-route they abandoned.
     expect(sent[0]).not.toHaveProperty('quickRouteBucket')
+  })
+})
+
+describe('the delegation input describes its own error state', () => {
+  it('is flagged invalid only while an error stands, and names its live region', async () => {
+    const { user } = renderDialog()
+
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+
+    const input = screen.getByLabelText(/who are you waiting on/i)
+    expect(input).toHaveAttribute('aria-invalid', 'false')
+    expect(input).toHaveAttribute('aria-describedby', 'clarify-error')
+    expect(document.getElementById('clarify-error')).not.toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /delegate/i }))
+    await screen.findByRole('alert')
+
+    expect(input).toHaveAttribute('aria-invalid', 'true')
   })
 })

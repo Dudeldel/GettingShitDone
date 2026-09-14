@@ -271,3 +271,29 @@ describe('CaptureForm — the confirmation', () => {
     expect(screen.getByLabelText(/catch an idea/i)).toHaveFocus()
   })
 })
+
+describe('the input describes its own error state', () => {
+  /**
+   * These four attributes arrived as implementation-review fixes (ph3 F6c) and had no test
+   * until the visual-design pass, which binds the input's error styling to `aria-invalid`.
+   * That makes losing the attribute a silent VISUAL regression as well as an accessibility
+   * one — and nothing in this project can see a visual regression.
+   */
+  it('is flagged invalid only while an error stands, and always names its live regions', async () => {
+    const { user } = renderForm()
+    const input = screen.getByLabelText(/catch an idea/i)
+
+    // The wiring exists from the first render: the regions are mounted before they have
+    // text, so `aria-describedby` can point at ids that already resolve.
+    expect(input).toHaveAttribute('aria-invalid', 'false')
+    expect(input).toHaveAttribute('aria-describedby', 'capture-error capture-status')
+    expect(document.getElementById('capture-error')).not.toBeNull()
+    expect(document.getElementById('capture-status')).not.toBeNull()
+
+    await user.type(input, '   ')
+    await user.click(screen.getByRole('button', { name: /capture/i }))
+    await screen.findByRole('alert')
+
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
+})

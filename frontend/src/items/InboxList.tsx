@@ -22,48 +22,43 @@ export function InboxList({
   emptyMessage?: string
 }) {
   if (items.length === 0) {
-    return <p style={{ color: 'var(--muted)' }}>{emptyMessage}</p>
+    return <p className="text-sm text-muted">{emptyMessage}</p>
   }
 
   return (
     // Server-ordered, newest first — no client-side re-sort, so the list cannot disagree
     // with what the API considers the order.
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    //
+    // role="list" is explicit because Preflight removes the bullets, and a bulletless list
+    // loses its list semantics in Safari + VoiceOver unless the role is restored.
+    <ul role="list" className="mt-2 space-y-2">
       {items.map((item) => (
-        <li key={item.id} style={{ borderTop: '1px solid var(--border)', padding: '0.6rem 0' }}>
-          <div style={{ color: 'var(--text-h)' }}>
-            {item.title}
-            {/* FR-006: an item done inside the two-minute timer stays in Next Actions rather
-                than disappearing — there is no Done bucket, and vanishing the instant the
-                user finishes something is indistinguishable from losing it. Marked in TEXT,
-                not by styling alone: a strikethrough is not announced. */}
-            {item.completedAt !== null && (
-              <span style={{ color: 'var(--muted)', marginLeft: '0.5rem', fontSize: '0.85em' }}>
-                ✓ Done
-              </span>
+        <li key={item.id} className="card flex items-start justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-ink">
+              {item.title}
+              {/* FR-006: an item done inside the two-minute timer stays in Next Actions
+                  rather than disappearing — there is no Done bucket, and vanishing the
+                  instant the user finishes something is indistinguishable from losing it.
+                  Marked in TEXT, not by styling alone: a strikethrough is not announced. */}
+              {item.completedAt !== null && (
+                <span className="ml-2 text-sm text-muted">✓ Done</span>
+              )}
+            </div>
+            {item.note !== null && item.note !== '' && (
+              <div className="mt-0.5 text-sm whitespace-pre-wrap text-body">{item.note}</div>
             )}
+            {/* FR-007: Delegation IS the who/what note — without it the bucket records that
+                something is delegated but not whom to chase. Null for the other seven. */}
+            {item.delegatedTo !== null && item.delegatedTo !== '' && (
+              <div className="mt-0.5 text-sm text-body">Waiting on: {item.delegatedTo}</div>
+            )}
+            <time dateTime={item.createdAt} className="mt-1 block text-xs text-muted">
+              {capturedAt(item.createdAt)}
+            </time>
           </div>
-          {item.note !== null && item.note !== '' && (
-            <div style={{ color: 'var(--text)', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
-              {item.note}
-            </div>
-          )}
-          {/* FR-007: Delegation IS the who/what note — without it the bucket records that
-              something is delegated but not whom to chase. Null for the other seven buckets. */}
-          {item.delegatedTo !== null && item.delegatedTo !== '' && (
-            <div style={{ color: 'var(--text)', fontSize: '0.9em' }}>
-              Waiting on: {item.delegatedTo}
-            </div>
-          )}
-          <time dateTime={item.createdAt} style={{ color: 'var(--muted)', fontSize: '0.8em' }}>
-            {capturedAt(item.createdAt)}
-          </time>
           {onClarify !== undefined && (
-            <button
-              type="button"
-              onClick={() => onClarify(item)}
-              style={{ marginLeft: '0.75rem' }}
-            >
+            <button type="button" className="btn btn-quiet shrink-0" onClick={() => onClarify(item)}>
               Clarify
             </button>
           )}
