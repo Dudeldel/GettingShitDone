@@ -36,6 +36,7 @@ Removed: `deploy/nginx`, `deploy/systemd`, `deploy/backup`, the SSH `deploy.yml`
 - **B3. Backend service** — connect the GitHub repo, **root `/`**, builder = **Dockerfile**. Variables (runtime):
   - Link MySQL via **reference variables**: `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
   - `APP_KEY` (generate: `php artisan key:generate --show`), `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<backend-domain>`, `OCTANE_SERVER=swoole`.
+  - `FRONTEND_URL=https://<frontend-domain>` — the **only** origin CORS allows (`config/cors.php`). Omitting it does not fail the deploy: the backend serves fine and answers every preflight with the `http://localhost:5173` fallback, so the SPA gets a CORS error and the server logs show nothing. The entrypoint now refuses to boot without it in production.
   - **App-sleeping OFF.** Generate a public domain.
 - **B4. Frontend service** — same repo, **root `/frontend`**, builder = **Dockerfile**. **Build** variable `VITE_API_BASE_URL=https://<backend-domain>`. Generate a public domain.
 - **B5. (optional)** PR/preview environments; per-environment `VITE_API_BASE_URL`.
