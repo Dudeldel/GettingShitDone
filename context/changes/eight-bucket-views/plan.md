@@ -274,12 +274,12 @@ No schema change. The purge is irreversible by design and has no undo.
 
 #### Automated
 
-- [x] 2.1 Frontend tests pass
-- [x] 2.2 Frontend build and lint pass
-- [x] 2.3 Backend suite still green
-- [x] 2.4 Purge-visibility test proven able to fail by deliberate breakage
+- [x] 2.1 Frontend tests pass — 8fbda50
+- [x] 2.2 Frontend build and lint pass — 8fbda50
+- [x] 2.3 Backend suite still green — 8fbda50
+- [x] 2.4 Purge-visibility test proven able to fail by deliberate breakage — 8fbda50
 
 #### Manual
 
-- [x] 2.5 All eight buckets reachable; clarified items appear where routed
-- [x] 2.6 Emptying the Trash leaves the other seven buckets untouched
+- [x] 2.5 All eight buckets reachable; clarified items appear where routed — 8fbda50
+- [x] 2.6 Emptying the Trash leaves the other seven buckets untouched — 8fbda50
