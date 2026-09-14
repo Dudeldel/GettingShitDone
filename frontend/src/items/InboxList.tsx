@@ -31,7 +31,18 @@ export function InboxList({
     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
       {items.map((item) => (
         <li key={item.id} style={{ borderTop: '1px solid var(--border)', padding: '0.6rem 0' }}>
-          <div style={{ color: 'var(--text-h)' }}>{item.title}</div>
+          <div style={{ color: 'var(--text-h)' }}>
+            {item.title}
+            {/* FR-006: an item done inside the two-minute timer stays in Next Actions rather
+                than disappearing — there is no Done bucket, and vanishing the instant the
+                user finishes something is indistinguishable from losing it. Marked in TEXT,
+                not by styling alone: a strikethrough is not announced. */}
+            {item.completedAt !== null && (
+              <span style={{ color: 'var(--muted)', marginLeft: '0.5rem', fontSize: '0.85em' }}>
+                ✓ Done
+              </span>
+            )}
+          </div>
           {item.note !== null && item.note !== '' && (
             <div style={{ color: 'var(--text)', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
               {item.note}

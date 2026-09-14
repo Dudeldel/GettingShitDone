@@ -181,6 +181,9 @@ export type GtdBucket =
 /** Mirrors App\Const\ItemConst::TITLE_MAX_LENGTH. */
 export const TITLE_MAX_LENGTH = 255
 
+/** Mirrors App\Const\ClarifyConst::TWO_MINUTE_SECONDS — the GTD two-minute rule (FR-006). */
+export const TWO_MINUTE_SECONDS = 120
+
 export interface Item {
   id: number
   title: string
@@ -196,6 +199,10 @@ export interface Item {
   // Filled by clarify when the item is delegated (FR-007); null for the other seven buckets.
   delegatedTo: string | null
   delegationDone: boolean | null
+  // Set only when clarify's two-minute timer ended in "done" (FR-006). There is no Done
+  // bucket among the eight, so completion is state: the item sits in Next Actions carrying
+  // this. null means "not finished", never "unknown".
+  completedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -213,6 +220,9 @@ export type NonActionableDestination = Extract<
   'trash' | 'someday_maybe' | 'reference'
 >
 
+/** Mirrors App\Domain\Clarify\TwoMinuteOutcome — how a two-minute timer ended (FR-006). */
+export type TwoMinuteOutcome = 'done' | 'deferred'
+
 /**
  * The answers the clarify endpoint accepts, as a discriminated union rather than a bag of
  * optional fields — every member here is a complete, terminating path through the GTD tree,
@@ -226,8 +236,37 @@ export type ClarifyAnswers =
   | { quickRouteBucket: GtdBucket }
   | { actionable: false; nonActionableDestination: NonActionableDestination }
   | { actionable: true; singleStep: false }
-  | { actionable: true; singleStep: true; delegable: false }
-  | { actionable: true; singleStep: true; delegable: true; delegatedTo: string }
+  // FR-006: "< 2 min?" sits between "single step?" and "can it be delegated?". A single-step
+  // path without it is no longer representable here — the backend rejects one with a 422, so
+  // leaving the old member in would only move that failure from compile time to runtime.
+  | {
+      actionable: true
+      singleStep: true
+      twoMinutes: true
+      twoMinuteOutcome: 'done'
+      twoMinuteLoops: number
+    }
+  // A deferred timer does not file the item: it rejoins the tree at the last question, so
+  // these two carry a delegation answer as well.
+  | {
+      actionable: true
+      singleStep: true
+      twoMinutes: true
+      twoMinuteOutcome: 'deferred'
+      twoMinuteLoops: number
+      delegable: false
+    }
+  | {
+      actionable: true
+      singleStep: true
+      twoMinutes: true
+      twoMinuteOutcome: 'deferred'
+      twoMinuteLoops: number
+      delegable: true
+      delegatedTo: string
+    }
+  | { actionable: true; singleStep: true; twoMinutes: false; delegable: false }
+  | { actionable: true; singleStep: true; twoMinutes: false; delegable: true; delegatedTo: string }
 
 export function clarifyItem(id: number, answers: ClarifyAnswers): Promise<Item> {
   return request<Item>(`/api/items/${id}/clarify`, {

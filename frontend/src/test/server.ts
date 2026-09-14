@@ -18,7 +18,7 @@ export const TEST_USER: User = {
   email: 'test@example.com',
 }
 
-/** Build an Item with the same shape the API returns — all eleven fields. */
+/** Build an Item with the same shape the API returns — every field, none optional. */
 export function makeItem(overrides: Partial<Item> = {}): Item {
   return {
     id: 1,
@@ -32,6 +32,7 @@ export function makeItem(overrides: Partial<Item> = {}): Item {
     urgent: null,
     delegatedTo: null,
     delegationDone: null,
+    completedAt: null,
     createdAt: '2026-09-14T10:00:00+00:00',
     updatedAt: '2026-09-14T10:00:00+00:00',
     ...overrides,

@@ -5,6 +5,7 @@ import {
   type GtdBucket,
   type Item,
   type NonActionableDestination,
+  TWO_MINUTE_SECONDS,
 } from '../api'
 import { messageFor } from '../apiMessage'
 
@@ -16,13 +17,16 @@ import { messageFor } from '../apiMessage'
  * the configuration burden the product exists to remove. So: one question per step, with a
  * way back, and no screen that shows them all at once.
  *
- * The `< 2 min?` question is absent on purpose; it arrives with the timer in S-03, between
- * "single step?" and "can it be delegated?".
+ * The `< 2 min?` question (FR-006) sits between "single step?" and "can it be delegated?",
+ * and answering yes starts the timer rather than filing the item — the one stateful step in
+ * the whole flow.
  */
 type Step =
   | 'actionable'
   | 'nonActionable'
   | 'singleStep'
+  | 'twoMinutes'
+  | 'timer'
   | 'delegable'
   | 'delegatedTo'
   | 'quickRoute'
@@ -44,6 +48,11 @@ const NON_ACTIONABLE: ReadonlyArray<{ value: NonActionableDestination; label: st
   { value: 'reference', label: 'Keep as reference' },
 ]
 
+/** m:ss — a bare seconds count reads as a number, not as time running out. */
+function formatClock(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
 export function ClarifyDialog({
   item,
   onClarified,
@@ -59,12 +68,33 @@ export function ClarifyDialog({
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // The two-minute rule's state. `loops` counts how many times the user asked for more
+  // time; `deferred` records that the timer ended without the work being done, which is
+  // what sends them back into the tree instead of filing the item.
+  const [secondsLeft, setSecondsLeft] = useState(TWO_MINUTE_SECONDS)
+  const [loops, setLoops] = useState(0)
+  const [deferred, setDeferred] = useState(false)
 
   // Focus has to enter the wizard, or a keyboard user clicks Clarify and is left on the
   // trigger with no announcement that anything opened, tabbing forward blind.
   useEffect(() => {
     headingRef.current?.focus()
   }, [])
+
+  // Only ticks while the timer step is on screen, and `loops` is a dependency so asking for
+  // more time tears the interval down and starts a fresh one — otherwise the restarted
+  // countdown would inherit whatever fraction of a second was left on the old tick.
+  useEffect(() => {
+    if (step !== 'timer') {
+      return
+    }
+
+    const id = setInterval(() => {
+      setSecondsLeft((left) => (left <= 1 ? 0 : left - 1))
+    }, 1000)
+
+    return () => clearInterval(id)
+  }, [step, loops])
 
   async function send(answers: ClarifyAnswers): Promise<void> {
     setError(null)
@@ -77,6 +107,26 @@ export function ClarifyDialog({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /**
+   * The tail of the tree, shared by both ways of reaching it: the item either never went
+   * near the timer, or a timer ran and the user deferred. The two produce different answer
+   * sets, and getting this wrong would report a timer that never ran (or lose one that did).
+   */
+  function withTwoMinuteAnswers(
+    delegation: { delegable: false } | { delegable: true; delegatedTo: string },
+  ): ClarifyAnswers {
+    return deferred
+      ? {
+          actionable: true,
+          singleStep: true,
+          twoMinutes: true,
+          twoMinuteOutcome: 'deferred',
+          twoMinuteLoops: loops,
+          ...delegation,
+        }
+      : { actionable: true, singleStep: true, twoMinutes: false, ...delegation }
   }
 
   function handleDelegation(event: FormEvent): void {
@@ -93,9 +143,16 @@ export function ClarifyDialog({
 
     void send(
       quickRouteTarget === null
-        ? { actionable: true, singleStep: true, delegable: true, delegatedTo: who }
+        ? withTwoMinuteAnswers({ delegable: true, delegatedTo: who })
         : { quickRouteBucket: quickRouteTarget, delegatedTo: who },
     )
+  }
+
+  /** Re-answering "< 2 min?" must discard whatever the previous timer recorded. */
+  function restartTwoMinuteRule(): void {
+    setSecondsLeft(TWO_MINUTE_SECONDS)
+    setLoops(0)
+    setDeferred(false)
   }
 
   return (
@@ -174,7 +231,7 @@ export function ClarifyDialog({
       {step === 'singleStep' && (
         <fieldset style={{ border: 0, padding: 0 }}>
           <legend>Is it a single step?</legend>
-          <button type="button" disabled={submitting} onClick={() => setStep('delegable')}>
+          <button type="button" disabled={submitting} onClick={() => setStep('twoMinutes')}>
             Yes
           </button>
           <button
@@ -183,6 +240,89 @@ export function ClarifyDialog({
             onClick={() => void send({ actionable: true, singleStep: false })}
           >
             No — it is a project
+          </button>
+        </fieldset>
+      )}
+
+      {step === 'twoMinutes' && (
+        <fieldset style={{ border: 0, padding: 0 }}>
+          <legend>Will it take less than two minutes?</legend>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              restartTwoMinuteRule()
+              setStep('timer')
+            }}
+          >
+            Yes — do it now
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              // Not "no" plus a stale timer: this path must report that no timer ran.
+              restartTwoMinuteRule()
+              setStep('delegable')
+            }}
+          >
+            No
+          </button>
+        </fieldset>
+      )}
+
+      {step === 'timer' && (
+        <fieldset style={{ border: 0, padding: 0 }}>
+          <legend>Do it now — the clock is running</legend>
+          {/* Not a live region: a countdown announced every second would drown out
+              everything else on the screen. The status line below announces the one
+              transition that matters. */}
+          <p style={{ fontSize: '2rem', color: 'var(--text-h)', margin: '0.25rem 0' }}>
+            {formatClock(secondsLeft)}
+          </p>
+          <p role="status" style={{ color: 'var(--muted)' }}>
+            {secondsLeft === 0
+              ? 'Time is up. Finish it, take another two minutes, or file it instead.'
+              : 'Two minutes on the clock.'}
+          </p>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() =>
+              void send({
+                actionable: true,
+                singleStep: true,
+                twoMinutes: true,
+                twoMinuteOutcome: 'done',
+                twoMinuteLoops: loops,
+              })
+            }
+          >
+            {submitting ? 'Filing…' : 'Done'}
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              // FR-006's "need more time loops the timer". Counting the loop here is the
+              // only record that the user underestimated the job.
+              setSecondsLeft(TWO_MINUTE_SECONDS)
+              setLoops((current) => current + 1)
+            }}
+          >
+            I need more time
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => {
+              // Deferring is not a destination — the item is still unclarified, so it goes
+              // back into the tree at the question it had not reached yet.
+              setDeferred(true)
+              setStep('delegable')
+            }}
+          >
+            File it instead
           </button>
         </fieldset>
       )}
@@ -196,7 +336,7 @@ export function ClarifyDialog({
           <button
             type="button"
             disabled={submitting}
-            onClick={() => void send({ actionable: true, singleStep: true, delegable: false })}
+            onClick={() => void send(withTwoMinuteAnswers({ delegable: false }))}
           >
             No — I will do it next
           </button>
@@ -235,7 +375,27 @@ export function ClarifyDialog({
         Cancel
       </button>
       {step !== 'actionable' && (
-        <button type="button" disabled={submitting} onClick={() => setStep(previousStep(step))}>
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => {
+            // Back out of the quick-route's delegation note to the quick-route itself, not
+            // into the tree: the user never answered "can someone else do it?", and landing
+            // there let them file the item somewhere they never chose.
+            const previous =
+              step === 'delegatedTo' && quickRouteTarget !== null
+                ? 'quickRoute'
+                : previousStep(step)
+
+            // Stepping back out of the two-minute rule drops what it recorded. Keeping a
+            // deferral alive behind a re-answered question would send "a timer ran" for a
+            // question the user has just answered differently.
+            if (previous === 'singleStep' || previous === 'twoMinutes') {
+              restartTwoMinuteRule()
+            }
+            setStep(previous)
+          }}
+        >
           Back
         </button>
       )}
@@ -249,8 +409,14 @@ function previousStep(step: Exclude<Step, 'actionable'>): Step {
     case 'singleStep':
     case 'quickRoute':
       return 'actionable'
-    case 'delegable':
+    case 'twoMinutes':
       return 'singleStep'
+    case 'timer':
+      return 'twoMinutes'
+    case 'delegable':
+      // Back from here always re-asks "< 2 min?", whether the user arrived by answering no
+      // or by deferring a timer. Both are answers to that question.
+      return 'twoMinutes'
     case 'delegatedTo':
       return 'delegable'
   }

@@ -282,3 +282,23 @@ describe('the Delegation view (FR-007)', () => {
     expect(await screen.findByText(/ania — sent the contract on tuesday/i)).toBeInTheDocument()
   })
 })
+
+describe('a completed item in Next Actions (FR-006)', () => {
+  it('is listed in its bucket, marked done', async () => {
+    listOnlyFor('next_actions', [
+      makeItem({
+        id: 1,
+        title: 'reply to the landlord',
+        bucket: 'next_actions',
+        completedAt: '2026-09-14T10:05:00+00:00',
+      }),
+    ])
+
+    renderBucket('/bucket/next_actions')
+
+    // The decision this slice recorded, asserted end to end: done is state, not a ninth
+    // bucket. The item stays where it was filed and says it is finished.
+    expect(await screen.findByText('reply to the landlord')).toBeInTheDocument()
+    expect(screen.getByText(/done/i)).toBeInTheDocument()
+  })
+})

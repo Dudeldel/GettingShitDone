@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GtdBucket, Item } from '../api'
 import { makeItem, server } from '../test/server'
 import { ClarifyDialog } from './ClarifyDialog'
@@ -12,12 +12,15 @@ import { ClarifyDialog } from './ClarifyDialog'
  * file pins is that the UI asks the questions in the enforced order and sends the answers
  * that describe the branch the user actually took.
  */
-function renderDialog(item: Item = makeItem({ id: 5, title: 'ring the dentist' })) {
+function renderDialog(
+  item: Item = makeItem({ id: 5, title: 'ring the dentist' }),
+  userOptions: Parameters<typeof userEvent.setup>[0] = {},
+) {
   const clarified: Item[] = []
   const cancelled = { count: 0 }
 
   return {
-    user: userEvent.setup(),
+    user: userEvent.setup(userOptions),
     clarified,
     cancelled,
     ...render(
@@ -107,9 +110,10 @@ describe('each branch sends the answers for the path taken', () => {
     const sent = captureClarifyRequest('delegation')
     const { user, clarified } = renderDialog()
 
-    // Three Yes answers to reach the note: actionable → single step → delegable.
+    // actionable → single step → NOT under two minutes → delegable.
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.type(screen.getByLabelText(/who are you waiting on/i), 'Ania — the contract')
     await user.click(screen.getByRole('button', { name: /delegate/i }))
@@ -118,6 +122,7 @@ describe('each branch sends the answers for the path taken', () => {
     expect(sent[0]).toEqual({
       actionable: true,
       singleStep: true,
+      twoMinutes: false,
       delegable: true,
       delegatedTo: 'Ania — the contract',
     })
@@ -129,10 +134,16 @@ describe('each branch sends the answers for the path taken', () => {
 
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
     await user.click(screen.getByRole('button', { name: /i will do it next/i }))
 
     await waitFor(() => expect(clarified).toHaveLength(1))
-    expect(sent[0]).toEqual({ actionable: true, singleStep: true, delegable: false })
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: false,
+      delegable: false,
+    })
   })
 })
 
@@ -150,6 +161,7 @@ describe('when clarify cannot complete', () => {
 
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: /delegate/i }))
 
@@ -240,5 +252,204 @@ describe('the wizard as a dialog', () => {
     await user.keyboard('{Escape}')
 
     expect(cancelled.count).toBe(1)
+  })
+})
+
+/**
+ * FR-006. The timer is the one stateful step in clarify, so these drive it on fake timers
+ * rather than waiting out two real minutes — the countdown is the thing under test, not the
+ * wall clock.
+ */
+describe('the two-minute rule (FR-006)', () => {
+  beforeEach(() => {
+    // shouldAdvanceTime keeps the rest of the world moving (userEvent's own scheduling, the
+    // MSW round trip) while the countdown stays under the test's control. Without it the
+    // awaited request never settles and every test here times out.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** actionable → single step → the two-minute question. */
+  async function reachTheTwoMinuteQuestion() {
+    const rendered = renderDialog(makeItem({ id: 5, title: 'ring the dentist' }), {
+      advanceTimers: vi.advanceTimersByTime,
+    })
+
+    await rendered.user.click(screen.getByRole('button', { name: 'Yes' }))
+    await rendered.user.click(screen.getByRole('button', { name: 'Yes' }))
+
+    return rendered
+  }
+
+  async function startTheTimer() {
+    const rendered = await reachTheTwoMinuteQuestion()
+    await rendered.user.click(screen.getByRole('button', { name: /do it now/i }))
+
+    return rendered
+  }
+
+  it('asks about two minutes before asking about delegation', async () => {
+    await reachTheTwoMinuteQuestion()
+
+    // FR-003's order: asking "can someone else do it?" first would let the user hand off
+    // something they were about to finish in a minute.
+    expect(screen.getByText(/less than two minutes/i)).toBeInTheDocument()
+    expect(screen.queryByText('Can someone else do it?')).not.toBeInTheDocument()
+  })
+
+  it('puts two minutes on the clock, not some other number', async () => {
+    await startTheTimer()
+
+    expect(screen.getByText('2:00')).toBeInTheDocument()
+  })
+
+  it('counts down in real time', async () => {
+    await startTheTimer()
+
+    await act(async () => {
+      vi.advanceTimersByTime(61_000)
+    })
+
+    // 61 seconds in, not 2:00 and not 0:00 — a clock that renders the constant and never
+    // moves would pass an assertion on the starting value alone.
+    expect(screen.getByText('0:59')).toBeInTheDocument()
+  })
+
+  it('stops at zero and says so, instead of running negative', async () => {
+    await startTheTimer()
+
+    await act(async () => {
+      vi.advanceTimersByTime(200_000)
+    })
+
+    expect(screen.getByText('0:00')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/time is up/i)
+  })
+
+  it('files the item as done when the user finishes inside the timer', async () => {
+    const sent = captureClarifyRequest('next_actions')
+    const { user, clarified } = await startTheTimer()
+
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: true,
+      twoMinuteOutcome: 'done',
+      twoMinuteLoops: 0,
+    })
+  })
+
+  it('never asks about delegating something the user has already done', async () => {
+    const sent = captureClarifyRequest('next_actions')
+    const { user, clarified } = await startTheTimer()
+
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(clarified).toHaveLength(1))
+
+    // The done branch terminates. A delegation answer riding along would tell the backend
+    // the user is waiting on someone for work that is already finished.
+    expect(sent[0]).not.toHaveProperty('delegable')
+    expect(sent[0]).not.toHaveProperty('delegatedTo')
+  })
+
+  it('loops the timer and reports how many times more time was asked for', async () => {
+    const sent = captureClarifyRequest('next_actions')
+    const { user, clarified } = await startTheTimer()
+
+    await act(async () => {
+      vi.advanceTimersByTime(90_000)
+    })
+    expect(screen.getByText('0:30')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /need more time/i }))
+    // A loop restarts the clock. Continuing from 0:30 would be "more time" in name only.
+    expect(screen.getByText('2:00')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /need more time/i }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: true,
+      twoMinuteOutcome: 'done',
+      twoMinuteLoops: 2,
+    })
+  })
+
+  it('returns a deferred item to the tree rather than filing it', async () => {
+    const sent = captureClarifyRequest('next_actions')
+    const { user, clarified } = await startTheTimer()
+
+    await user.click(screen.getByRole('button', { name: /need more time/i }))
+    await user.click(screen.getByRole('button', { name: /file it instead/i }))
+
+    // Deferring is not a destination: the item is still unclarified, so nothing has been
+    // sent and the last question is now on screen.
+    expect(sent).toHaveLength(0)
+    expect(clarified).toHaveLength(0)
+    expect(screen.getByText('Can someone else do it?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /i will do it next/i }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: true,
+      twoMinuteOutcome: 'deferred',
+      twoMinuteLoops: 1,
+      delegable: false,
+    })
+  })
+
+  it('still lets a deferred item be delegated', async () => {
+    const sent = captureClarifyRequest('delegation')
+    const { user, clarified } = await startTheTimer()
+
+    await user.click(screen.getByRole('button', { name: /file it instead/i }))
+    await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.type(screen.getByLabelText(/who are you waiting on/i), 'Ania — the contract')
+    await user.click(screen.getByRole('button', { name: /delegate/i }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: true,
+      twoMinuteOutcome: 'deferred',
+      twoMinuteLoops: 0,
+      delegable: true,
+      delegatedTo: 'Ania — the contract',
+    })
+  })
+
+  it('forgets a timer the user stepped back out of', async () => {
+    const sent = captureClarifyRequest('next_actions')
+    const { user, clarified } = await startTheTimer()
+
+    await user.click(screen.getByRole('button', { name: /need more time/i }))
+    await user.click(screen.getByRole('button', { name: /file it instead/i }))
+    // Back to the two-minute question, and this time answer it the other way.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
+    await user.click(screen.getByRole('button', { name: /i will do it next/i }))
+
+    await waitFor(() => expect(clarified).toHaveLength(1))
+    // No timer ran on the path the user ended up taking, so none may be reported — a stale
+    // deferral here would record a loop against a question that was answered "no".
+    expect(sent[0]).toEqual({
+      actionable: true,
+      singleStep: true,
+      twoMinutes: false,
+      delegable: false,
+    })
   })
 })

@@ -34,3 +34,34 @@ describe('InboxList', () => {
     expect(screen.getByText(/your inbox is empty/i)).toBeInTheDocument()
   })
 })
+
+describe('an item finished under the two-minute rule (FR-006)', () => {
+  it('shows it as done rather than hiding it', () => {
+    render(
+      <InboxList
+        items={[
+          makeItem({
+            id: 1,
+            title: 'reply to the landlord',
+            bucket: 'next_actions',
+            completedAt: '2026-09-14T10:05:00+00:00',
+          }),
+          makeItem({ id: 2, title: 'ring the dentist', bucket: 'next_actions' }),
+        ]}
+      />,
+    )
+
+    // Still listed: there is no Done bucket, and an item vanishing the moment the user
+    // finishes it is indistinguishable from one that was lost.
+    expect(screen.getByText('reply to the landlord')).toBeInTheDocument()
+    expect(screen.getByText(/done/i)).toBeInTheDocument()
+  })
+
+  it('does not mark an unfinished item as done', () => {
+    render(<InboxList items={[makeItem({ id: 1, title: 'ring the dentist' })]} />)
+
+    // The marker has to depend on completedAt. One rendered unconditionally would look
+    // right on the screen above and label every open action as finished.
+    expect(screen.queryByText(/done/i)).not.toBeInTheDocument()
+  })
+})

@@ -193,6 +193,7 @@ describe('clarifying from the Inbox', () => {
     await user.click(screen.getAllByRole('button', { name: /clarify/i })[1])
     await user.click(screen.getByRole('button', { name: 'Yes' }))
     await user.click(screen.getByRole('button', { name: 'Yes' }))
+    await user.click(screen.getByRole('button', { name: 'No' }))
     await user.click(screen.getByRole('button', { name: /i will do it next/i }))
 
     await waitFor(() =>
