@@ -37,4 +37,9 @@ class ItemActionNotAllowedException extends RuntimeException
     {
         return new self('Only Next Actions, Projects, Calendar and Delegation items can be marked done.');
     }
+
+    public static function editAttributesInTrash(): self
+    {
+        return new self('Items in the Trash cannot be edited. Re-file it first if you want it back.');
+    }
 }

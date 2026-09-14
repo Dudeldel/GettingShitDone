@@ -155,6 +155,40 @@ class LogEvent
     }
 
     /**
+     * An item's attributes were replaced (FR-011 + FR-013).
+     *
+     * Records THAT the attributes changed, never WHAT they became. Tags and context are free
+     * user text and a due date is personal scheduling — none of it belongs in a log line, and
+     * the redaction processor keys on field names it would not recognise here. The durable
+     * record of the values is the row itself.
+     *
+     * One action for the whole set rather than one per field: the write is a single statement,
+     * so splitting the event would imply an atomicity the storage layer does not have.
+     *
+     * @param  int  $itemId  the item whose attributes were replaced
+     */
+    public static function itemAttributesUpdated(int $itemId): void
+    {
+        self::emit('item.attributes.success', 'database', 'success', [
+            'item_id' => $itemId,
+        ]);
+    }
+
+    /**
+     * An attribute write could not be applied.
+     *
+     * @param  int  $itemId  the item that kept its old attributes
+     * @param  string  $reason  SQLSTATE, never a query or its bindings
+     */
+    public static function itemAttributesUpdateFailed(int $itemId, string $reason): void
+    {
+        self::emit('item.attributes.failure', 'database', 'failure', [
+            'item_id' => $itemId,
+            'reason' => $reason,
+        ], 'error');
+    }
+
+    /**
      * The Trash was emptied (FR-004's destination, completed).
      *
      * The only irreversible operation in the product, so it gets a durable trace. The count

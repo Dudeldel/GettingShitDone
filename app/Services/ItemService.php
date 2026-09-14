@@ -9,6 +9,7 @@ use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
 use App\Dto\Payload\CompleteItemPayload;
+use App\Dto\Payload\ItemAttributesPayload;
 use App\Dto\Payload\RefileItemPayload;
 use App\Exceptions\InvalidClarificationException;
 use App\Exceptions\ItemActionNotAllowedException;
@@ -140,6 +141,35 @@ class ItemService
         }
 
         LogEvent::itemCompletionChanged($item->id, $payload->completed);
+
+        return $item;
+    }
+
+    /**
+     * Replace an item's due date, tags, context and Eisenhower flags (FR-011 + FR-013).
+     *
+     * Deliberately thin. There is no domain rule to enforce here beyond the one the repository
+     * predicate already owns (the Trash is not editable): attributes are orthogonal to the
+     * bucket an item sits in, which is exactly why a date can drive the Calendar VIEW without
+     * touching the item's membership. A guard re-asserted here — as refile() does — would be
+     * theatre, because unlike a destination there is no value of these five fields that the
+     * domain considers illegal.
+     *
+     * @throws ItemActionNotAllowedException the item is in the Trash
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemPersistenceException the write failed
+     */
+    public function updateAttributes(int $itemId, ItemAttributesPayload $payload): ItemDto
+    {
+        try {
+            $item = $this->items->updateAttributes($itemId, $payload);
+        } catch (ItemPersistenceException $e) {
+            LogEvent::itemAttributesUpdateFailed($itemId, $e->sqlState());
+
+            throw $e;
+        }
+
+        LogEvent::itemAttributesUpdated($item->id);
 
         return $item;
     }

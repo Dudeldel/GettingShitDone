@@ -7,6 +7,7 @@ use App\Domain\Item\GtdBucket;
 use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Dto\Payload\ItemAttributesPayload;
 use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
@@ -168,6 +169,49 @@ class ItemRepository implements ItemRepositoryInterface
         if ($affected === 0) {
             throw Item::query()->whereKey($itemId)->exists()
                 ? ItemActionNotAllowedException::completeOutsideActionBuckets()
+                : new ItemNotFoundException('No item with id '.$itemId.'.');
+        }
+
+        return $this->readBack($itemId);
+    }
+
+    public function updateAttributes(int $itemId, ItemAttributesPayload $payload): ItemDto
+    {
+        try {
+            // Same single-statement discipline as the other write verbs. The predicate is
+            // `bucket <> trash`: an item in the bin is on its way out, and editing it invites
+            // "where did my change go" the moment the Trash is emptied.
+            //
+            // The update array is the five attribute columns and the timestamp. The bucket is
+            // absent ON PURPOSE and must stay absent — a due date that moved an item would make
+            // the Calendar view stored rather than derived, which is the one thing this whole
+            // slice is built not to do.
+            //
+            // All five are written unconditionally, including nulls: this verb replaces the
+            // attribute set rather than patching it, so "clear the date" is the same statement
+            // as "set the date" with a different value.
+            $affected = Item::query()
+                ->where('id', $itemId)
+                ->where('bucket', '<>', GtdBucket::Trash->value)
+                ->update([
+                    'due_date' => $payload->dueDate,
+                    // A query-builder update bypasses the Eloquent cast, but both the MySQL and
+                    // SQLite grammars json_encode an array value in prepareBindingsForUpdate,
+                    // so the column still receives JSON. Proven by the repository test rather
+                    // than assumed — read back through the `array` cast, it must come out a list.
+                    'tags' => $payload->tags,
+                    'context' => $payload->context,
+                    'important' => $payload->important,
+                    'urgent' => $payload->urgent,
+                    'updated_at' => now(),
+                ]);
+        } catch (QueryException $e) {
+            throw new ItemPersistenceException((string) $e->getCode());
+        }
+
+        if ($affected === 0) {
+            throw Item::query()->whereKey($itemId)->exists()
+                ? ItemActionNotAllowedException::editAttributesInTrash()
                 : new ItemNotFoundException('No item with id '.$itemId.'.');
         }
 

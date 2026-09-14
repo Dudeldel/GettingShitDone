@@ -87,15 +87,26 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | HTTP edge contract and sensitive data | Prove the published contract is the enforced one and captured text stays out of logs | #4, #7 | integration, unit | not started | — |
 | 3 | Single-account invariant | Prove a second account cannot be created, including under concurrent requests | #6 | integration | not started | — |
 | 4 | Browser layer and visual regression | One real end-to-end walk of the north star plus a pin against layout drift | #5, browser half of #1 | e2e, deterministic visual diff | not started | — |
-| 5 | Clarify routing invariant | Prove every decision-tree path ends in exactly one bucket | #3 | unit, integration | not started | — |
+| 5 | Clarify routing invariant | Prove every decision-tree path ends in exactly one bucket | #3 | unit, integration | complete | — (covered by roadmap slice S-02, not by its own change folder — see §6.6) |
 
 Phase order follows cost × signal: the two guardrail risks are attacked at
 the cheapest layer that can catch them (Phase 1), then the backend edge
 where churn and lived findings concentrate (Phase 2), then the small phase
 holding up the access model (Phase 3). The browser layer is deliberately
 fourth — it is the most expensive layer and only pays once the cheaper ones
-are green. Phase 5 is last because it is **blocked until roadmap slice S-02
-(`guided-clarify-routing`) ships**; the flow it protects does not exist yet.
+are green. Phase 5 was ordered last because it was blocked until roadmap slice
+S-02 (`guided-clarify-routing`) shipped; S-02 has since shipped and been
+archived, so the block is gone.
+
+**Status audit, 2026-09-14.** The Status column is orchestrator state — it
+records whether a *phase* was run, not how much coverage happens to exist. Those
+two drifted apart, because feature slices shipped tests against these risks on
+their own. An audit of `tests/` against §2 found: Phase 5 fully covered (now
+`complete`); Phase 2 covered except for one half of its goal; Phase 3 covered
+only on the case §2 names as the anti-pattern; Phase 4 untouched. Phases 2, 3
+and 4 stay `not started` because none of them has been *run* and each still has
+real work left — §6.6 records exactly what, so whoever opens them scopes the
+remainder instead of re-deriving it.
 
 ## 4. Stack
 
@@ -245,6 +256,46 @@ the relevant rollout phase ships; before that, the sub-section reads
   entirely would throw before any request is sent. Narrow (ordinary private mode
   still provides storage) and out of Phase 1's scope.
 
+**Phase 5 — Clarify routing invariant** (covered 2026-09-14; no change folder).
+
+- Coverage landed **inside roadmap slice S-02**, not through this rollout. The
+  branch matrix lives in `tests/Unit/Clarify/ClarifyDecisionTest.php`, whose
+  `never leaves a clarified item in the Inbox, on any path through the tree` is
+  literally Risk #3's oracle; persistence of the transition is covered by
+  `tests/Feature/Item/ClarifyItemTest.php`. Both layers §2 asked for exist, so
+  the phase is closed rather than re-opened.
+- The §2 anti-pattern (deriving the expected bucket by reading the routing code)
+  was avoided: the expectations are written against PRD FR-004/005/006/007, and
+  `ClarifyDecision`'s own docblock lists the terminating paths in the same terms.
+
+**Phase 2 — HTTP edge contract and sensitive data** (audited 2026-09-14; still
+`not started`, but narrower than written).
+
+- **Already covered, incidentally:** boundary tests derive their limits from the
+  owning constant rather than hard-coding them (`ItemConst` in
+  `tests/Feature/Item/{CaptureItemTest,ClarifyItemTest,UpdateItemAttributesTest}.php`)
+  — the lived finding §2 warns about. Risk #7 has
+  `tests/Unit/Logging/RedactSensitiveDataTest.php` plus failure-path log-record
+  assertions across the Feature suite.
+- **What actually remains** is the first half of the goal: *nothing checks that
+  the published contract is the enforced one.* There is no test, and no CI step,
+  that compares the Scramble output (`api.json`) against the rules the
+  FormRequests really apply — so the two can drift silently, which is the exact
+  failure Risk #4 names. Scope the phase to that when it opens.
+
+**Phase 3 — Single-account invariant** (audited 2026-09-14; `not started`).
+
+- `tests/Feature/Auth/RegisterTest.php` covers only the **sequential** second
+  registration — which is precisely what §2 lists as this risk's anti-pattern
+  ("Testing only the sequential second attempt — which already passes — and
+  calling the race covered").
+- The gap is real, not pedantic: the gate is `lockForUpdate` inside a
+  transaction (`UserRepository::createFirstUserOrNull`), **not** a database
+  constraint. `users.email UNIQUE` would stop two concurrent registrations using
+  the same address, but the invariant is "at most one user *at all*" — two
+  concurrent registrations with *different* addresses are the shape that has to
+  be proven, and nothing asserts it.
+
 ## 7. What We Deliberately Don't Test
 
 Exclusions agreed during the rollout (Phase 2 interview, Q5). Future
@@ -268,6 +319,10 @@ contributors should respect these unless the underlying assumption changes.
 - Stack versions last verified: 2026-09-14 (frontend rows are now installed and running,
   not projected: vitest 5.0.0, jsdom 30.0.1, msw 2.15.0, @testing-library/react 16.3.3)
 - AI-native tool references last verified: 2026-09-14
+- §3 Status column last audited against `tests/` on disk: 2026-09-14 — Phase 5 moved
+  `not started` → `complete` (covered by slice S-02); Phases 2 and 3 left `not started`
+  with their remaining scope recorded in §6.6; Phase 4 untouched. Re-audit whenever a
+  feature slice ships tests that land on a risk in §2.
 
 Refresh (`/10x-test-plan --refresh`) when:
 

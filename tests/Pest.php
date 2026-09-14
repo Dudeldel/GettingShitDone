@@ -5,6 +5,7 @@ use App\Domain\Item\GtdBucket;
 use App\Domain\Item\ItemRepositoryInterface;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Dto\Payload\ItemAttributesPayload;
 use App\Exceptions\ItemPersistenceException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -47,6 +48,29 @@ function seedItem(string $title, GtdBucket $bucket): int
 }
 
 /**
+ * A full attribute payload with everything null, overridden by whatever the caller names.
+ *
+ * Lives here for the same reason seedItem() does: Pest loads every test into one process, so
+ * a file-scope helper in a test file becomes a fatal redeclaration the day a later slice picks
+ * the same name.
+ *
+ * Spelling out all five keys is the point — the endpoint replaces the whole attribute set, so
+ * a test that sent a partial body would be exercising a 422 rather than the behaviour it named.
+ *
+ * @return array<string, mixed>
+ */
+function itemAttributes(mixed ...$named): array
+{
+    return array_merge([
+        'dueDate' => null,
+        'tags' => null,
+        'context' => null,
+        'important' => null,
+        'urgent' => null,
+    ], $named);
+}
+
+/**
  * Hand-rolled fake repository recording what the service asked it for. No return type on
  * purpose: the tests read the recorder properties off the anonymous class.
  */
@@ -75,6 +99,10 @@ function fakeItemRepository(bool $failing = false)
         public ?int $completedItemId = null;
 
         public ?bool $completedTo = null;
+
+        public ?int $attributedItemId = null;
+
+        public ?ItemAttributesPayload $attributesWritten = null;
 
         public function create(CaptureItemPayload $payload, GtdBucket $bucket): ItemDto
         {
@@ -156,6 +184,32 @@ function fakeItemRepository(bool $failing = false)
                 createdAt: '2026-09-07T10:00:00+00:00',
                 updatedAt: '2026-09-14T12:00:00+00:00',
                 completedAt: $completed ? '2026-09-14T12:00:00+00:00' : null,
+            );
+        }
+
+        public function updateAttributes(int $itemId, ItemAttributesPayload $payload): ItemDto
+        {
+            if ($this->failing) {
+                throw new ItemPersistenceException('HY000');
+            }
+
+            $this->attributedItemId = $itemId;
+            $this->attributesWritten = $payload;
+
+            return new ItemDto(
+                id: $itemId,
+                title: 'an idea',
+                note: null,
+                // Unchanged by design: setting attributes must never move an item. A service
+                // that somehow rebucketed would be visible here.
+                bucket: GtdBucket::NextActions,
+                createdAt: '2026-09-07T10:00:00+00:00',
+                updatedAt: '2026-09-14T12:00:00+00:00',
+                dueDate: $payload->dueDate,
+                tags: $payload->tags,
+                context: $payload->context,
+                important: $payload->important,
+                urgent: $payload->urgent,
             );
         }
 

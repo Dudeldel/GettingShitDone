@@ -6,6 +6,7 @@ use App\Domain\Item\GtdBucket;
 use App\Dto\Payload\CaptureItemPayload;
 use App\Dto\Payload\ClarifyItemPayload;
 use App\Dto\Payload\CompleteItemPayload;
+use App\Dto\Payload\ItemAttributesPayload;
 use App\Dto\Payload\RefileItemPayload;
 use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemPersistenceException;
@@ -234,6 +235,70 @@ it('emits a failure event and rethrows when a re-file write fails', function () 
     Log::shouldHaveReceived('log')->withArgs(
         fn ($level, $message, $context) => $level === 'error'
             && $message === 'item.refiled.failure'
+            && $context['reason'] === 'HY000',
+    );
+});
+
+it('hands the whole attribute set to the repository and records the change', function () {
+    Log::spy();
+    $repo = fakeItemRepository();
+
+    $dto = (new ItemService($repo, new ClarifyDecision))->updateAttributes(7, ItemAttributesPayload::fromArray([
+        'dueDate' => '2026-09-30',
+        'tags' => ['work'],
+        'context' => '@computer',
+        'important' => true,
+        'urgent' => false,
+    ]));
+
+    expect($repo->attributedItemId)->toBe(7)
+        ->and($repo->attributesWritten?->dueDate)->toBe('2026-09-30')
+        ->and($repo->attributesWritten?->tags)->toBe(['work'])
+        ->and($repo->attributesWritten?->context)->toBe('@computer')
+        ->and($repo->attributesWritten?->important)->toBeTrue()
+        ->and($repo->attributesWritten?->urgent)->toBeFalse()
+        // The bucket the fake returns is unchanged, so a service that somehow moved the item
+        // on the way out would be visible here rather than only in an integration test.
+        ->and($dto->bucket)->toBe(GtdBucket::NextActions);
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.attributes.success'
+            && $context['item_id'] === 7,
+    );
+});
+
+it('keeps the attribute values out of the log line', function () {
+    // Tags and context are free user text and a due date is personal scheduling. The event
+    // records THAT the attributes changed; the row is the record of what they became.
+    Log::spy();
+
+    (new ItemService(fakeItemRepository(), new ClarifyDecision))->updateAttributes(7, ItemAttributesPayload::fromArray([
+        'dueDate' => '2026-09-30',
+        'tags' => ['my-pin-is-4711'],
+        'context' => '@home-4711',
+        'important' => null,
+        'urgent' => null,
+    ]));
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.attributes.success'
+            && ! str_contains(json_encode($context), '4711'),
+    );
+});
+
+it('reports a failed attribute write and rethrows', function () {
+    Log::spy();
+
+    expect(fn () => (new ItemService(fakeItemRepository(failing: true), new ClarifyDecision))
+        ->updateAttributes(7, ItemAttributesPayload::fromArray([
+            'dueDate' => null, 'tags' => null, 'context' => null,
+            'important' => null, 'urgent' => null,
+        ])))
+        ->toThrow(ItemPersistenceException::class);
+
+    Log::shouldHaveReceived('log')->withArgs(
+        fn ($level, $message, $context) => $message === 'item.attributes.failure'
+            && $level === 'error'
             && $context['reason'] === 'HY000',
     );
 });

@@ -129,20 +129,41 @@ it('ignores a client-supplied bucket and metadata', function () {
 
     // `bucket` is fillable on the model, so this is the test that has to be able to fail:
     // the invariant is that capture always targets the Inbox, whatever the body says.
+    //
+    // Verified by deliberate breakage (S-06): loosening #[Fillable] ALONE leaves this green,
+    // because ItemRepository::create() builds an explicit three-key array from a payload that
+    // has no metadata fields — #[Fillable] is the second lock, not the one doing the work.
+    // It goes red once request data actually reaches create(), which is the regression a
+    // "let users tag at capture time" change would really introduce. So this guards the
+    // endpoint's behaviour, not the attribute on the model.
     $this->postJson('/api/items', [
         'title' => 'idea',
         'bucket' => 'trash',
         'id' => 999,
         'important' => true,
+        'urgent' => true,
         'dueDate' => '2026-12-31',
+        'tags' => ['work'],
+        'context' => '@computer',
     ])->assertStatus(Response::HTTP_CREATED)
         ->assertJsonPath('bucket', 'inbox')
         ->assertJsonPath('important', null)
-        ->assertJsonPath('dueDate', null);
+        ->assertJsonPath('urgent', null)
+        ->assertJsonPath('dueDate', null)
+        ->assertJsonPath('tags', null)
+        ->assertJsonPath('context', null);
 
     $item = Item::query()->sole();
     expect($item->bucket)->toBe(GtdBucket::Inbox)
-        ->and($item->important)->toBeNull();
+        ->and($item->important)->toBeNull()
+        // All five, not just the two this test started with. S-06 gave the attributes a write
+        // path of their own, which makes "capture still cannot set them" a claim about five
+        // columns rather than two — and an untested column is where a loosened #[Fillable]
+        // would slip through unnoticed.
+        ->and($item->urgent)->toBeNull()
+        ->and($item->due_date)->toBeNull()
+        ->and($item->tags)->toBeNull()
+        ->and($item->context)->toBeNull();
 });
 
 it('reports a write failure as 500 without echoing the payload', function () {

@@ -5,6 +5,7 @@ namespace App\Domain\Item;
 use App\Domain\Clarify\ClarifyOutcome;
 use App\Dto\ItemDto;
 use App\Dto\Payload\CaptureItemPayload;
+use App\Dto\Payload\ItemAttributesPayload;
 use App\Exceptions\ItemActionNotAllowedException;
 use App\Exceptions\ItemNotFoundException;
 use App\Exceptions\ItemNotInInboxException;
@@ -70,6 +71,25 @@ interface ItemRepositoryInterface
      * @throws ItemPersistenceException the write failed
      */
     public function setCompleted(int $itemId, bool $completed): ItemDto;
+
+    /**
+     * Replace an item's five attribute columns: due date, tags, context and the two
+     * Eisenhower flags (FR-011 + FR-013).
+     *
+     * A FULL replacement, not a patch — the payload always carries all five, so a null field
+     * clears that attribute. This is what lets one verb both set and remove a due date.
+     *
+     * Writes those five columns and updated_at, and NOTHING else. In particular never the
+     * bucket: setting a date must not move an item, which is the whole basis of the Calendar
+     * view being derived rather than stored. Copying an update array from clarify() or
+     * refile() here would reintroduce exactly the class of defect S-11's F2 recorded — a
+     * write that quietly clobbers a sibling column.
+     *
+     * @throws ItemNotFoundException no item with this id
+     * @throws ItemActionNotAllowedException the item is in the Trash, where editing is moot
+     * @throws ItemPersistenceException the write failed
+     */
+    public function updateAttributes(int $itemId, ItemAttributesPayload $payload): ItemDto;
 
     /**
      * Permanently delete every item in the Trash, returning how many went.

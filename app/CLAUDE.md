@@ -215,7 +215,10 @@ final class ClarifyConst
 {
     /** Below this, the GTD "two-minute rule" fires the in-app timer instead of filing the item. */
     public const TWO_MINUTE_SECONDS = 120;
+}
 
+final class ItemConst
+{
     /** Date format used in every date_format: rule and ->format() call. */
     public const DATE_FORMAT = 'Y-m-d';
 }
@@ -227,7 +230,7 @@ final class ClarifyConst
 
 ```php
 // GOOD
-'dueDate' => ['nullable', 'date_format:' . ClarifyConst::DATE_FORMAT],
+'dueDate' => ['nullable', 'date_format:' . ItemConst::DATE_FORMAT],
 // BAD
 'dueDate' => ['nullable', 'date_format:Y-m-d'],
 ```
@@ -237,7 +240,7 @@ final class ClarifyConst
 ```php
 // GOOD
 'title'   => ['required', 'string', 'max:255'],
-'dueDate' => ['nullable', 'date_format:' . ClarifyConst::DATE_FORMAT],
+'dueDate' => ['nullable', 'date_format:' . ItemConst::DATE_FORMAT],
 // BAD
 'title' => 'required|string|max:255',
 ```
@@ -266,7 +269,7 @@ Mutex pattern ("null when X, required when not X") — pair `required_unless` + 
 'commissionedAt' => [
     'bail', 'nullable',
     'required_unless:isDraft,true',
-    'date_format:' . ClarifyConst::DATE_FORMAT,
+    'date_format:' . ItemConst::DATE_FORMAT,
     'prohibited_if:isDraft,true',
 ],
 ```

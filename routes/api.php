@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ClarifyController;
 use App\Http\Controllers\Api\V1\CompleteController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ItemAttributesController;
 use App\Http\Controllers\Api\V1\ItemController;
 use App\Http\Controllers\Api\V1\RefileController;
 use App\Http\Controllers\Api\V1\TrashController;
@@ -37,6 +38,13 @@ Route::middleware(['auth:sanctum', 'throttle:api', LogContextMiddleware::class])
     Route::post('/items/{itemId}/refile', [RefileController::class, 'store'])
         ->whereNumber('itemId');
     Route::post('/items/{itemId}/complete', [CompleteController::class, 'store'])
+        ->whereNumber('itemId');
+
+    // The item's own attributes (FR-011 + FR-013). Still not a generic PATCH: the payload
+    // behind this route can express a date, tags, a context and two flags, and nothing else —
+    // so unlike a PATCH it cannot name a bucket. Writing five columns at once is fine; being
+    // able to reach a sixth is what was refused.
+    Route::post('/items/{itemId}/attributes', [ItemAttributesController::class, 'store'])
         ->whereNumber('itemId');
 
     // The Trash as a resource: deleting it empties it. No route parameter, so the product's
