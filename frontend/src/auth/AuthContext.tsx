@@ -7,6 +7,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionExpired, setSessionExpired] = useState(false)
   // Ready immediately when there's no token to rehydrate; otherwise wait for me().
   const [ready, setReady] = useState(() => api.getToken() === null)
+  // Whether the rehydration has taken long enough to be worth explaining.
+  const [slowRehydrate, setSlowRehydrate] = useState(false)
+
+  useEffect(() => {
+    if (ready) {
+      return
+    }
+
+    const id = setTimeout(() => setSlowRehydrate(true), 300)
+
+    return () => clearTimeout(id)
+  }, [ready])
 
   useEffect(() => {
     // A 401 anywhere drops us back to logged-out, and records why. The screen the user was
@@ -58,12 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Avoid a flash of the login screen while we rehydrate the session from storage.
   //
   // Returning null here meant every reload carrying a stored token showed a blank white
-  // document for the length of a round trip — the first thing a returning user saw. The
-  // message is delayed rather than immediate, so a fast rehydration does not flash it.
+  // document for the length of a round trip — the first thing a returning user saw.
+  //
+  // The message is withheld by MOUNTING it late, not by fading it in. A CSS delay only moves
+  // opacity, and opacity:0 leaves the text in the accessibility tree — so on a fast
+  // rehydration a screen-reader user was told "Restoring your session…" while a sighted user
+  // correctly saw nothing. Both audiences now get the same answer.
   if (!ready) {
     return (
       <main className="flex min-h-svh items-center justify-center px-4">
-        <p className="settle text-sm text-muted">Restoring your session…</p>
+        {slowRehydrate && <p className="text-sm text-muted">Restoring your session…</p>}
       </main>
     )
   }

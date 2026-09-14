@@ -9,20 +9,24 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Tracked separately from `error` because only ONE of the two failures is the fields'
+  // fault. A dropped connection must not announce the email and password as "invalid entry".
+  const [badCredentials, setBadCredentials] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
+    setBadCredentials(false)
     setSubmitting(true)
     try {
       await login(email, password)
       navigate('/', { replace: true })
     } catch (err) {
+      const wrongCredentials = err instanceof ApiError && err.status === 401
+      setBadCredentials(wrongCredentials)
       setError(
-        err instanceof ApiError && err.status === 401
-          ? 'Invalid email or password.'
-          : 'Login failed. Please try again.',
+        wrongCredentials ? 'Invalid email or password.' : 'Login failed. Please try again.',
       )
     } finally {
       setSubmitting(false)
@@ -51,7 +55,8 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="username"
-              aria-invalid={error !== null}
+              aria-invalid={badCredentials}
+              aria-describedby="login-error"
               className="field mt-1.5 font-normal"
             />
           </label>
@@ -63,7 +68,8 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              aria-invalid={error !== null}
+              aria-invalid={badCredentials}
+              aria-describedby="login-error"
               className="field mt-1.5 font-normal"
             />
           </label>
@@ -71,7 +77,7 @@ export function LoginPage() {
               that no screen reader ever heard: conditionally rendered, with no role, and in
               a hardcoded `crimson` that was also the app's only colour failing contrast. */}
           <div className="live-line">
-            <p role="alert" className="text-danger">
+            <p id="login-error" role="alert" className="text-danger">
               {error ?? ''}
             </p>
           </div>

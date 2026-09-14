@@ -16,15 +16,18 @@
   --color-ground: #f6f6f7;
   --color-surface: #ffffff;
   --color-line: #d5d5dc;
+  /* A control whose only boundary IS its border needs 3:1 (WCAG SC 1.4.11) — and .btn-quiet's
+     white face is 1.08:1 against the page ground, so the border is all there is. --color-line
+     stays for decorative dividers and card edges, where 1.4.11 does not apply. */
+  --color-control-line: #8a8a96;
 
   /* Three genuinely distinct levels. The scaffold had two: `--muted` was byte-identical to
      `--text`, so every timestamp and empty state rendered exactly like body copy. */
   --color-ink: #16161a;
   --color-body: #4a4a55;
-  --color-muted: #767682;
+  --color-muted: #6b6b77;
 
   --color-accent: #4f46b8;
-  --color-accent-soft: #eeecfa;
 
   /* Both carried over unchanged from the scaffold — they are the two colours whose contrast
      was already verified at 6.54:1. */
@@ -42,7 +45,9 @@
 html {
   color-scheme: light;
   font-family: var(--font-sans);
-  font-size: 16px;
+  /* Percentage, not 16px: an absolute root defeats the reader's browser font-size
+     setting, and every other size in this file is rem. */
+  font-size: 100%;
   /* UNITLESS, and that is the whole point. The scaffold's `font: 18px/145%` computed the
      inherited line-height to an absolute 26.1px, which every descendant then used no matter
      how large its own text was — so the 56px h1 overlapped itself at the default desktop
@@ -90,12 +95,17 @@ h3 {
 
 /* One global focus treatment, so nothing is ever left with the browser default clashing
    against the rest — including the wizard's `tabIndex={-1}` heading, which is focused
-   programmatically and would otherwise show nothing at all. `:focus-visible` rather than
-   `:focus` keeps the ring off mouse clicks. */
+   programmatically. `:focus-visible` rather than `:focus` keeps the ring off mouse clicks —
+   which does mean a mouse user who clicks Clarify sees no ring on the wizard heading, and
+   that is the intended behaviour rather than a gap.
+
+   No `border-radius` here: setting one does not shape the outline, it rewrites the ELEMENT's
+   own radius — and being unlayered this rule beat .btn's 8px and every rounded-* utility, so
+   every control visibly squared off the moment it took keyboard focus. Browsers already
+   follow the element's own radius when painting an outline. */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 3px;
 }
 
 /**
@@ -154,7 +164,7 @@ h3 {
 
   .btn-quiet {
     background: var(--color-surface);
-    border-color: var(--color-line);
+    border-color: var(--color-control-line);
     color: var(--color-body);
   }
 
@@ -188,7 +198,7 @@ h3 {
     display: block;
     width: 100%;
     background: var(--color-surface);
-    border: 1px solid var(--color-line);
+    border: 1px solid var(--color-control-line);
     border-radius: 8px;
     padding: 0.5rem 0.75rem;
     color: var(--color-ink);
@@ -204,26 +214,10 @@ h3 {
     border-color: var(--color-danger);
   }
 
-  /* Revealed only if the wait lasts long enough to be worth explaining. A rehydration that
-     answers in 80ms should show nothing at all rather than flash a message. */
-  .settle {
-    animation: settle-in 0.2s ease 0.3s both;
-  }
-
-  @keyframes settle-in {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
-  }
-
   /* Live regions are mounted before they have text, deliberately (ph3 F6a). Reserving the
      line stops every message from shoving the rest of the page down by one line. */
   .live-line {
-    min-height: 1.25rem;
+    min-height: 1.3125rem;
     font-size: 0.875rem;
   }
 }

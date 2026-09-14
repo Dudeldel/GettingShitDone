@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
-import { AppHeader } from '../AppHeader'
 import { BucketNav } from './BucketNav'
 import { bucketLabel, isGtdBucket } from './buckets'
 import { InboxList } from './InboxList'
@@ -90,9 +89,8 @@ export function BucketPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <AppHeader />
-      <h1 className="mt-6 mb-2">{bucketLabel(bucket)}</h1>
+    <main className="mx-auto max-w-2xl px-4 pt-6 pb-10">
+      <h1 className="mb-2">{bucketLabel(bucket)}</h1>
       <BucketNav current={bucket} />
 
       {loadError !== null && (

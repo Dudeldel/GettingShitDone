@@ -566,7 +566,8 @@ describe('the delegation input describes its own error state', () => {
     expect(document.getElementById('clarify-error')).not.toBeNull()
 
     await user.click(screen.getByRole('button', { name: /delegate/i }))
-    await screen.findByRole('alert')
+    // The region is always mounted, so wait on the message rather than on the region.
+    await screen.findByText(/who you are waiting on/i)
 
     expect(input).toHaveAttribute('aria-invalid', 'true')
   })

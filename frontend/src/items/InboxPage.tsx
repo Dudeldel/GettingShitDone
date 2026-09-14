@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
-import { AppHeader } from '../AppHeader'
 import { BucketNav } from './BucketNav'
 import { CaptureForm } from './CaptureForm'
 import { ClarifyDialog } from './ClarifyDialog'
@@ -53,9 +52,7 @@ export function InboxPage() {
   }, [])
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <AppHeader />
-
+    <main className="mx-auto max-w-2xl px-4 pt-6 pb-10">
       {/* Prepend the item the POST returned rather than refetching: confirmation then
           costs one round trip, not two (the ~2s capture NFR). */}
       <CaptureForm onCaptured={(item) => setItems((current) => [item, ...current])} />
@@ -77,7 +74,7 @@ export function InboxPage() {
 
       {/* The screen's own name. The product name moved into the shared frame, so every
           screen now has exactly one h1 and it says where you are. */}
-      <h1 className="mt-6 mb-2">Inbox</h1>
+      <h1 className="mb-2">Inbox</h1>
       {loadError !== null && (
         <p className="text-sm text-danger">Could not load your Inbox: {loadError}</p>
       )}

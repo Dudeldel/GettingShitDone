@@ -292,7 +292,9 @@ describe('the input describes its own error state', () => {
 
     await user.type(input, '   ')
     await user.click(screen.getByRole('button', { name: /capture/i }))
-    await screen.findByRole('alert')
+    // Waiting on the MESSAGE, not on the region: the region is deliberately always mounted,
+    // so findByRole('alert') resolves on the first tick and synchronises nothing.
+    await screen.findByText(/type something first/i)
 
     expect(input).toHaveAttribute('aria-invalid', 'true')
   })

@@ -73,9 +73,17 @@ each phase, and by all six CI gates staying green throughout.
   decision; it is a behaviour fix wearing a styling costume.
 - **No new features, no behaviour changes** beyond the three surfaces named in scope and the
   `aria-modal` removal. No re-filing, no per-item delete, no metadata editing.
-- **No JSX structural changes** — no new wrappers around matched text, no changed heading
-  levels, no `<ul>`/`<li>` replacements, no moving Clarify into a menu. The 91 tests are the
-  contract; see "Critical Implementation Details".
+- **No JSX structural changes** — no new wrappers around matched text, no `<ul>`/`<li>`
+  replacements, no moving Clarify into a menu. The 91 tests are the contract; see "Critical
+  Implementation Details".
+  - **Amended during Phase 2 — one heading-level exception.** This entry originally also
+    forbade changed heading levels. Phase 2's shared frame forced the question: a bucket page's
+    single `<h1>` must name the bucket (seven tests assert exactly one, by level, with no
+    name), so the product name cannot be a heading anywhere. The Inbox's
+    `<h1>Getting Shit Done</h1>` therefore became plain text in the frame and its
+    `<h2>Inbox</h2>` was promoted to `<h1>`, making every screen's one `<h1>` name that screen.
+    Nothing pinned the old content. Recorded here rather than left in a commit message, so a
+    reader of the plan alone does not conclude it was prohibited.
 - **No `tailwind.config.js`** — v4 is CSS-first.
 
 ## Implementation Approach
