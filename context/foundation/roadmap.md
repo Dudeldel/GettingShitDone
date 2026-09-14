@@ -42,8 +42,8 @@ GSD is a single-user "Getting Things Done" app whose whole reason to exist is re
 | S-08 | eisenhower-quadrants       | view Next Actions arranged in Eisenhower quadrants              | S-02, S-07    | FR-014                            | proposed |
 | S-09 | weekly-review              | run a guided weekly review across the buckets                    | S-05          | FR-015                            | proposed |
 | S-10 | visual-design-pass         | see an interface that reads as a considered product, not a scaffold | S-01, S-02, S-05 | no FR — see Note                 | done |
-| S-11 | refile-between-buckets     | move an already-bucketed item into a different bucket             | S-02, S-05    | FR-010 (v2, promoted)             | proposed |
-| S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap, see S-12          | proposed |
+| S-11 | item-actions-after-clarify | move a clarified item to another bucket, and mark it done          | S-02, S-03, S-05 | FR-010 (v2, promoted) + PRD gap  | proposed |
+| S-12 | complete-an-item           | mark an item done outside the two-minute timer                    | S-03          | none — PRD gap                    | absorbed by S-11 |
 
 ## Streams
 
@@ -300,16 +300,17 @@ Foundations below assume these are present and do NOT re-scaffold them.
   rewrite of the components' behaviour.
 - **Status:** done
 
-### S-11: Re-file an item into another bucket
+### S-11: What an item can do after it has been clarified
 
-- **Outcome:** user can move an already-bucketed item into a different bucket — Someday/Maybe
-  into Next Actions when it becomes real, a mis-filed item into where it belongs.
-- **Change ID:** refile-between-buckets
+- **Outcome:** user can act on an item that has already left the Inbox — move it into a
+  different bucket (Someday/Maybe into Next Actions when it becomes real, a mis-filed item
+  into where it belongs), and mark it done without having done it inside a two-minute timer.
+- **Change ID:** item-actions-after-clarify
 - **PRD refs:** FR-010 (nice-to-have, deferred to v2). Promoted out of Parked because daily
   use of the shipped app made it the first thing missing: once an item leaves the Inbox there
   is currently NO way to move it, ever.
-- **Prerequisites:** S-02, S-05
-- **Parallel with:** S-12
+- **Prerequisites:** S-02, S-03, S-05
+- **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:**
   - The backend does not merely lack this — it actively forbids it. `ItemRepository::clarify`
@@ -320,28 +321,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Whether re-filing re-runs the decision tree or is a direct destination pick. FR-002's
     quick-route already exists as a UI precedent. Owner: user. Block: **yes** — it decides
     whether this is a new endpoint or a new mode of an existing one.
-- **Risk:** FR-008's exactly-one-bucket invariant is the thing to protect, and the single
-  statement that enforces it is the same one that blocks this. The second trap is recorded in
-  S-03's implementation review (F9): `clarify` writes `completed_at => null` unconditionally,
-  which is safe ONLY because the inbox guard means a completed item can never be re-clarified.
-  A re-filing path that reuses that write erases completions silently. Third: S-05 deliberately
-  gave the Trash purge no item id so a generic "delete this row" verb could not arrive by the
-  back door — re-filing must not become that verb either.
-- **Status:** proposed
-
-### S-12: Mark an item done outside the two-minute timer
-
-- **Outcome:** user can mark any actionable item complete, and see what they finished — the
-  ordinary act of doing a Next Action.
-- **Change ID:** complete-an-item
-- **PRD refs:** **none, and that is the finding.** This is a PRD gap rather than a deferred
-  item: FR-006 records only the two-minute timer's outcome, and FR-007's done flag belongs to
-  Delegation alone. Nothing in the spec lets a user finish a Next Action. Today `completed_at`
-  can only be set by doing the work inside 120 seconds.
-- **Prerequisites:** S-03 (which introduced `completed_at` and the "✓ Done" marker)
-- **Parallel with:** S-11
-- **Blockers:** —
-- **Unknowns:**
   - Does a completed item stay in its bucket, as the two-minute rule already does, or leave
     it? S-03 decided "done is a state, not a destination" for its own branch; this slice
     either extends that decision or contradicts it. Owner: user. Block: **yes**.
@@ -351,10 +330,37 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Whether completed items stay listed forever. Today they do, deliberately — vanishing is
     indistinguishable from being lost — but that answer was for a trickle, not a backlog.
     Owner: user. Block: no.
-- **Risk:** Smaller than it looks: the column, the DTO field and the "✓ Done" rendering all
-  already exist and are tested, so this is a write path plus a control, not new state. The
-  trap is the same `completed_at => null` write named in S-11.
+- **Risk:** FR-008's exactly-one-bucket invariant is the thing to protect, and the single
+  statement that enforces it is the same one that blocks this. The second trap is recorded in
+  S-03's implementation review (F9): `clarify` writes `completed_at => null` unconditionally,
+  which is safe ONLY because the inbox guard means a completed item can never be re-clarified.
+  A re-filing path that reuses that write erases completions silently. Third: S-05 deliberately
+  gave the Trash purge no item id so a generic "delete this row" verb could not arrive by the
+  back door — re-filing must not become that verb either.
+
+  Marking done carries less new risk than it looks — the column, the DTO field and the "✓ Done"
+  rendering already exist and are tested, so it is a write path plus a control rather than new
+  state. It is in the same slice because it shares everything that IS risky: the same guard
+  blocks it, the same `completed_at => null` write can erase it, and it needs the same thing in
+  the UI that does not exist yet — a per-row action in a bucket view, which S-05 deliberately
+  left out so a generic delete verb could not arrive by the back door.
 - **Status:** proposed
+
+### S-12: Mark an item done outside the two-minute timer
+
+- **Outcome:** user can mark any actionable item complete, and see what they finished — the
+  ordinary act of doing a Next Action.
+- **Change ID:** complete-an-item
+- **PRD refs:** **none, and that is the finding.** A PRD gap rather than a deferred item:
+  FR-006 records only the two-minute timer's outcome, and FR-007's done flag belongs to
+  Delegation alone. Nothing in the spec lets a user finish a Next Action.
+- **Prerequisites:** S-03
+- **Status:** absorbed by S-11 — both change an item's state *after* clarify, both are blocked
+  by the same `where bucket = inbox` guard, both can be silently undone by the same
+  `completed_at => null` write (S-03 review F9), and both need the same missing UI affordance:
+  a per-row action in a bucket view. Splitting them would mean two change folders editing the
+  same repository method, the same DTO and the same list component, and reconciling them at
+  integration. Following the S-04 precedent, S-11 carries both.
 
 ## Backlog Handoff
 
