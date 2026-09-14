@@ -8,17 +8,17 @@ import { BUCKETS, bucketLabel } from './buckets'
  */
 export function BucketNav({ current }: { current: GtdBucket }) {
   return (
-    <nav aria-label="Buckets" style={{ margin: '1rem 0', lineHeight: 2 }}>
+    <nav aria-label="Buckets" className="my-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
       {BUCKETS.map((bucket) => (
         <Link
           key={bucket}
           to={bucket === 'inbox' ? '/' : `/bucket/${bucket}`}
           aria-current={bucket === current ? 'page' : undefined}
-          style={{
-            marginRight: '0.75rem',
-            color: bucket === current ? 'var(--text-h)' : 'var(--text)',
-            fontWeight: bucket === current ? 600 : 400,
-          }}
+          className={
+            bucket === current
+              ? 'font-semibold text-accent'
+              : 'text-body hover:text-ink'
+          }
         >
           {bucketLabel(bucket)}
         </Link>

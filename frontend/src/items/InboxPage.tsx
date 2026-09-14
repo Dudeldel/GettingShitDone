@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
-import { useAuth } from '../auth/context'
+import { AppHeader } from '../AppHeader'
 import { BucketNav } from './BucketNav'
 import { CaptureForm } from './CaptureForm'
 import { ClarifyDialog } from './ClarifyDialog'
@@ -20,7 +20,6 @@ function mergeById(fromServer: Item[], local: Item[]): Item[] {
 }
 
 export function InboxPage() {
-  const { user, logout } = useAuth()
   const [items, setItems] = useState<Item[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -55,18 +54,7 @@ export function InboxPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      {/* flex-wrap and a gap, which the scaffold had neither of: without them the
-          "Signed in as…" span squeezed the h1 below its natural width, wrapping it to two
-          lines that then overlapped because of the inherited absolute line-height. */}
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1>Getting Shit Done</h1>
-        <span className="text-sm text-muted">
-          {user !== null && <>Signed in as {user.email} · </>}
-          <button type="button" className="btn btn-ghost text-sm" onClick={() => void logout()}>
-            Log out
-          </button>
-        </span>
-      </header>
+      <AppHeader />
 
       {/* Prepend the item the POST returned rather than refetching: confirmation then
           costs one round trip, not two (the ~2s capture NFR). */}
@@ -87,7 +75,9 @@ export function InboxPage() {
 
       <BucketNav current="inbox" />
 
-      <h2 className="mt-6 mb-2">Inbox</h2>
+      {/* The screen's own name. The product name moved into the shared frame, so every
+          screen now has exactly one h1 and it says where you are. */}
+      <h1 className="mt-6 mb-2">Inbox</h1>
       {loadError !== null && (
         <p className="text-sm text-danger">Could not load your Inbox: {loadError}</p>
       )}

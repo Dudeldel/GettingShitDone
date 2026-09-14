@@ -430,35 +430,35 @@ and the CSS delta should be small. Worth a glance at the build output in Phase 3
 
 #### Automated
 
-- [x] 1.1 Frontend tests pass, including the new aria assertions
-- [x] 1.2 Build and types pass
-- [x] 1.3 Lint passes
-- [x] 1.4 Backend gates unaffected
+- [x] 1.1 Frontend tests pass, including the new aria assertions — fbe09ae
+- [x] 1.2 Build and types pass — fbe09ae
+- [x] 1.3 Lint passes — fbe09ae
+- [x] 1.4 Backend gates unaffected — fbe09ae
 
 #### Manual
 
-- [x] 1.5 Walk every Inbox state from research §6 in a browser
-- [x] 1.6 No heading or clock overlaps at 1280px, 1024px, 400px
-- [x] 1.7 Every input and button uses the app typeface
-- [x] 1.8 Focus ring visible on every control including the wizard heading, absent on mouse click
-- [x] 1.9 Muted text visibly lighter than body text
-- [x] 1.10 Card shadows on list rows do not read as noise
-- [x] 1.11 Every token verified against its contrast bar
+- [x] 1.5 Walk every Inbox state from research §6 in a browser — fbe09ae
+- [x] 1.6 No heading or clock overlaps at 1280px, 1024px, 400px — fbe09ae
+- [x] 1.7 Every input and button uses the app typeface — fbe09ae
+- [x] 1.8 Focus ring visible on every control including the wizard heading, absent on mouse click — fbe09ae
+- [x] 1.9 Muted text visibly lighter than body text — fbe09ae
+- [x] 1.10 Card shadows on list rows do not read as noise — fbe09ae
+- [x] 1.11 Every token verified against its contrast bar — fbe09ae
 
 ### Phase 2: Bucket screens and the shared frame
 
 #### Automated
 
-- [ ] 2.1 Frontend tests pass
-- [ ] 2.2 Build and lint pass
+- [x] 2.1 Frontend tests pass
+- [x] 2.2 Build and lint pass
 
 #### Manual
 
-- [ ] 2.3 Walk all eight buckets: loading, empty, populated, load error
-- [ ] 2.4 Walk the Trash sequence: idle, confirming, purging, failed, purged
-- [ ] 2.5 Destructive button reads as dangerous; focus still lands on "Keep them"
-- [ ] 2.6 Delegation shows "Waiting on:", Next Actions shows "✓ Done"
-- [ ] 2.7 Header identical on every screen; Log out works from a bucket view
+- [x] 2.3 Walk all eight buckets: loading, empty, populated, load error
+- [x] 2.4 Walk the Trash sequence: idle, confirming, purging, failed, purged
+- [x] 2.5 Destructive button reads as dangerous; focus still lands on "Keep them"
+- [x] 2.6 Delegation shows "Waiting on:", Next Actions shows "✓ Done"
+- [x] 2.7 Header identical on every screen; Log out works from a bucket view
 
 ### Phase 3: Login, the missing surfaces, and close-out
 

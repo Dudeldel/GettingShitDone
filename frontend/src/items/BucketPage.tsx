@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { emptyTrash, type Item, listItems } from '../api'
 import { messageFor } from '../apiMessage'
+import { AppHeader } from '../AppHeader'
 import { BucketNav } from './BucketNav'
 import { bucketLabel, isGtdBucket } from './buckets'
 import { InboxList } from './InboxList'
@@ -89,21 +90,15 @@ export function BucketPage() {
   }
 
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        padding: '2rem',
-        maxWidth: 640,
-        margin: '0 auto',
-      }}
-    >
-      <h1>{bucketLabel(bucket)}</h1>
+    <main className="mx-auto max-w-2xl px-4 py-8">
+      <AppHeader />
+      <h1 className="mt-6 mb-2">{bucketLabel(bucket)}</h1>
       <BucketNav current={bucket} />
 
       {loadError !== null && (
-        <p style={{ color: 'var(--error)' }}>Could not load this bucket: {loadError}</p>
+        <p className="text-sm text-danger">Could not load this bucket: {loadError}</p>
       )}
-      {loadError === null && loading && <p>Loading…</p>}
+      {loadError === null && loading && <p className="text-sm text-muted">Loading…</p>}
       {loadError === null && !loading && (
         <InboxList items={items} emptyMessage={`Nothing in ${bucketLabel(bucket)}.`} />
       )}
@@ -119,33 +114,35 @@ export function BucketPage() {
               setPurgeError(null)
             }
           }}
-          style={{ marginTop: '1.5rem' }}
+          className="mt-6"
         >
           {!confirming && (
-            <button type="button" onClick={() => setConfirming(true)}>
+            <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
               Empty the Trash
             </button>
           )}
           {confirming && (
-            <>
-              <p aria-label="Discard confirmation" role="alert" style={{ color: 'var(--error)' }}>
+            <div className="card border-danger/40 p-4">
+              <p aria-label="Discard confirmation" role="alert" className="text-sm text-danger">
                 Permanently discard {items.length}{' '}
                 {items.length === 1 ? 'item' : 'items'}? This cannot be undone.
               </p>
               {/* The destructive choice is the one that looks dangerous, and it is NOT the one
                   that takes focus — a keyboard user who hits Enter on reflex must keep their
-                  items, not lose them. */}
+                  items, not lose them. Filled red rather than red text: with the safe button
+                  holding focus, the loud one has to be the one you deliberately reach for. */}
               <button
                 type="button"
+                className="btn btn-danger mt-3 mr-2"
                 disabled={purging}
                 onClick={() => void purge()}
-                style={{ color: 'var(--error)', fontWeight: 600 }}
               >
                 {purging ? 'Discarding…' : 'Yes, discard them'}
               </button>
               <button
                 ref={confirmRef}
                 type="button"
+                className="btn btn-quiet mt-3"
                 disabled={purging}
                 onClick={() => {
                   setConfirming(false)
@@ -155,21 +152,24 @@ export function BucketPage() {
               >
                 Keep them
               </button>
-            </>
+            </div>
           )}
         </section>
       )}
       {/* Labelled so it stays distinguishable from the confirmation's own alert — two
           unnamed live regions on one screen leave tests matching on message text, which was
-          an observation from the S-02 review. */}
-      <p aria-label="Trash purge error" role="alert" style={{ color: 'var(--error)' }}>
-        {purgeError ?? ''}
-      </p>
-      {discarded !== null && (
-        <p role="status" style={{ color: 'var(--muted)' }}>
-          Discarded {discarded} {discarded === 1 ? 'item' : 'items'}.
+          an observation from the S-02 review. The reserved line sits on the wrapper so the
+          region itself still renders zero child nodes when empty. */}
+      <div className="live-line mt-3">
+        <p aria-label="Trash purge error" role="alert" className="text-danger">
+          {purgeError ?? ''}
         </p>
-      )}
+        {discarded !== null && (
+          <p role="status" className="text-muted">
+            Discarded {discarded} {discarded === 1 ? 'item' : 'items'}.
+          </p>
+        )}
+      </div>
     </main>
   )
 }
