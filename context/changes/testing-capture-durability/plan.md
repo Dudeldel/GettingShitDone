@@ -672,11 +672,11 @@ behaviour and its own tests go with it.
 
 #### Automated
 
-- [x] 5.1 Full backend quality gate passes: `php composer.phar quality`
-- [x] 5.2 Frontend lint, build and test pass
-- [x] 5.3 No "TBD" left in test-plan §6.3
+- [x] 5.1 Full backend quality gate passes: `php composer.phar quality` — 60c76c3
+- [x] 5.2 Frontend lint, build and test pass — 60c76c3
+- [x] 5.3 No "TBD" left in test-plan §6.3 — 60c76c3
 
 #### Manual
 
-- [x] 5.4 A fresh reader can add a frontend component test from §6.3 alone
-- [x] 5.5 §2 Source cells no longer cite churn figures pointing at deleted files
+- [x] 5.4 A fresh reader can add a frontend component test from §6.3 alone — 60c76c3
+- [x] 5.5 §2 Source cells no longer cite churn figures pointing at deleted files — 60c76c3
