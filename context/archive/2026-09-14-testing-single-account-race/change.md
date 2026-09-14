@@ -1,10 +1,10 @@
 ---
 change_id: testing-single-account-race
 title: Prove a second account cannot be created, including under concurrency
-status: implemented
+status: archived
 created: 2026-09-14
 updated: 2026-09-14
-archived_at: null
+archived_at: 2026-09-14T19:10:10Z
 ---
 
 ## Notes
